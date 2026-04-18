@@ -14,10 +14,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             echo "1. Narik kode frontend terbaru..."
-            cd /home/ubuntu/syair-project/syair-fe
+            cd /home/ubuntu/syair/syair-fe
             git pull origin main
 
             echo "2. Re-build dan Restart khusus layanan frontend..."
-            cd /home/ubuntu/syair-project
+            cd /home/ubuntu/syair
 
             docker compose up -d --build frontend
