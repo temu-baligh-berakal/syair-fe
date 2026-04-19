@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -116,7 +116,7 @@ function ModeSelect({
   );
 }
 
-export default function Home() {
+function SearchInterface() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -475,5 +475,13 @@ export default function Home() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <SearchInterface />
+    </Suspense>
   );
 }
