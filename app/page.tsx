@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import LlmSummary from "@/components/LlmSummary";
 
 import {
   Dialog,
@@ -383,6 +384,11 @@ function SearchInterface() {
                     <p className="mb-6 text-sm text-[#70757a]">
                       Sekitar {response.total} hasil ({searchMeta ? formatDuration(searchMeta.durationMs) : "0,00"} detik) untuk &ldquo;{response.query}&rdquo;
                     </p>
+
+                    <LlmSummary 
+                      query={response.query} 
+                      results={response.results} 
+                    />
 
                     <div className="space-y-8">
                       {response.results.map((item, index) => (
