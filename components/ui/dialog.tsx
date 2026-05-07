@@ -27,7 +27,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className = "", ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={`fixed inset-0 z-50 bg-slate-950/35 ${className}`}
+    className={`fixed inset-0 z-50 bg-black/50 dark:bg-black/70 ${className}`}
     {...props}
   />
 ));
@@ -41,11 +41,11 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-6 shadow-2xl outline-none ${className}`}
+      className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/95 p-6 shadow-2xl dark:shadow-xl dark:shadow-black/40 outline-none backdrop-blur-sm ${className}`}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 text-muted-foreground dark:text-slate-500 transition hover:bg-muted dark:hover:bg-zinc-800 hover:text-foreground dark:hover:text-white">
         <CloseIcon />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -70,7 +70,7 @@ const DialogTitle = React.forwardRef<
 >(({ className = "", ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={`text-xl font-semibold text-slate-900 ${className}`}
+    className={`text-xl font-semibold text-foreground dark:text-white ${className}`}
     {...props}
   />
 ));
@@ -82,7 +82,7 @@ const DialogDescription = React.forwardRef<
 >(({ className = "", ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={`text-sm text-slate-500 ${className}`}
+    className={`text-sm text-muted-foreground dark:text-slate-400 ${className}`}
     {...props}
   />
 ));

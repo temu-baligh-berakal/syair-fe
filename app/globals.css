@@ -80,3 +80,19 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Placeholder text styling */
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
+/* Select component styling */
+[role="listbox"] {
+  color: var(--foreground);
+}
+
+[role="option"] {
+  color: var(--foreground);
+}

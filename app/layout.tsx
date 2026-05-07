@@ -39,6 +39,20 @@ export default function RootLayout({
     >
       <head>
         <meta name="color-scheme" content="light dark" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+        (function() {
+          try {
+            var theme = localStorage.getItem('theme') || 'system';
+            var isDark = theme === 'dark' || 
+              (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) document.documentElement.classList.add('dark');
+          } catch(e) {}
+        })();
+      `,
+          }}
+        />
       </head>
       <body className="min-h-full bg-background dark:bg-zinc-950 text-foreground dark:text-white transition-colors duration-300">
         <ThemeProvider>
