@@ -291,9 +291,11 @@ function SearchInterface() {
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 pb-12 pt-6">
           {!showResults ? (
             <section className="flex flex-1 flex-col items-center justify-center pb-24">
-              <h1 className="select-none text-7xl font-medium tracking-tight text-black sm:text-8xl">
-                Syair
-              </h1>
+              <img
+                src="/assets/logo.png"
+                alt="Syair"
+                className="select-none w-[420px] max-w-full"
+              />
 
               <form onSubmit={handleSubmit} className="mt-8 w-full max-w-3xl">
                 <div className="rounded-2xl border border-[#dfe1e5] px-5 py-3 shadow-sm hover:shadow-md focus-within:shadow-md">
@@ -344,7 +346,7 @@ function SearchInterface() {
                   onClick={() => router.push(pathname)}
                   className="select-none pt-2 text-3xl font-medium tracking-tight text-black"
                 >
-                  Syair
+                  <img src="/assets/logo.png" alt="Syair" className="h-8 max-h-full" />
                 </button>
 
                 <div className="w-full max-w-3xl">
