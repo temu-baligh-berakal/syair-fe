@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 
 type SearchResult = {
@@ -15,26 +15,45 @@ type SearchResult = {
 export default function LlmSummary({
   query,
   results,
+  isSearchLoading = false, // TAMBAHAN PROPS BARU
 }: {
   query: string;
   results: SearchResult[];
+  isSearchLoading?: boolean;
 }) {
   const [summary, setSummary] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [displayedText, setDisplayedText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // State baru untuk mengatur apakah teks diekspansi atau tidak
   const [isExpanded, setIsExpanded] = useState(false);
 
-  useEffect(() => {
-    if (!query || !results || results.length === 0) return;
+  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    // 1. Jika aplikasi sedang fetch ke OpenSearch, paksa mode Shimmer
+    if (isSearchLoading) {
+      setLoading(true);
+      setError(null);
+      setSummary(null);
+      setDisplayedText("");
+      setIsTyping(false);
+      setIsExpanded(false);
+      return;
+    }
+
+    // 2. Jika fetch OpenSearch selesai tapi hasil kosong, hilangkan Shimmer
+    if (!query || !results || results.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // 3. Jika OpenSearch berhasil menemukan hasil, mulai fetch ke LLM
     const abortController = new AbortController();
 
     async function fetchSummary() {
       setLoading(true);
       setError(null);
-      setIsExpanded(false); // Reset state ekspansi saat mencari query baru
       
       try {
         const top3 = results.slice(0, 3).map((item) => ({
@@ -57,17 +76,14 @@ export default function LlmSummary({
         }
 
         const data = await res.json();
-        
         let text = data.summary;
+        
         try {
           const parsed = JSON.parse(text);
           if (parsed.summary) text = parsed.summary;
-        } catch (e) {
-          // Fallback jika respons murni string
-        }
-        
-        text = text.replace(/\\n/g, '\n');
+        } catch (e) {}
 
+        text = text.replace(/\\n/g, '\n');
         setSummary(text);
       } catch (err: any) {
         if (err.name === "AbortError") return;
@@ -81,13 +97,38 @@ export default function LlmSummary({
 
     return () => {
       abortController.abort();
+      if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
     };
-  }, [query, results]);
+  }, [query, results, isSearchLoading]); // Tambahkan isSearchLoading sebagai dependency
 
-  if (!loading && !summary && !error) return null;
+  // Logika Animasi Mengetik
+  useEffect(() => {
+    if (summary && !loading) {
+      setIsTyping(true);
+      let index = 0;
+      const speed = 5;
+
+      if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+
+      typingIntervalRef.current = setInterval(() => {
+        setDisplayedText(summary.slice(0, index));
+        index++;
+        if (index > summary.length) {
+          if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+          setIsTyping(false);
+        }
+      }, speed);
+    }
+  }, [summary, loading]);
+
+  // Sembunyikan component HANYA jika sedang tidak ada proses sama sekali
+  if (!isSearchLoading && !loading && !summary && !error && !isTyping) return null;
+
+  // Gabungan status loading (OpenSearch loading ATAU LLM loading)
+  const showShimmer = isSearchLoading || loading;
 
   return (
-    <div className="mb-8 overflow-hidden rounded-2xl border border-[#dadce0] bg-gradient-to-br from-[#f8f9fa] to-[#e8eaed] p-[1px] shadow-sm">
+    <div className="mb-8 overflow-hidden rounded-2xl border border-[#dadce0] bg-gradient-to-br from-[#f8f9fa] to-[#e8eaed] p-[1px] shadow-sm transition-all duration-500 ease-in-out">
       <div className="rounded-[15px] bg-white p-5">
         <div className="mb-3 flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1a73e8]">
@@ -96,48 +137,47 @@ export default function LlmSummary({
           <h3 className="text-[16px] font-medium text-[#202124]">Ringkasan AI</h3>
         </div>
 
-        {loading ? (
-          <div className="space-y-3 py-2">
-            <div className="h-4 w-full animate-pulse rounded-md bg-[#e8eaed]"></div>
-            <div className="h-4 w-[90%] animate-pulse rounded-md bg-[#e8eaed]"></div>
-            <div className="h-4 w-[75%] animate-pulse rounded-md bg-[#e8eaed]"></div>
-          </div>
-        ) : error ? (
-          <p className="text-sm text-[#c5221f]">{error}</p>
-        ) : (
-          <div>
-            {/* Wrapper teks dengan line-clamp dinamis */}
-            <div 
-              className={`text-[15px] leading-7 text-[#3c4043] transition-all duration-300 ${
-                !isExpanded ? "line-clamp-6" : ""
-              }`}
-            >
-              <ReactMarkdown
-                // Custom styling untuk elemen markdown agar sesuai dengan tema aplikasimu
-                components={{
-                  p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="mt-4 mb-2 text-[17px] font-semibold text-[#202124]" {...props} />,
-                  strong: ({node, ...props}) => <strong className="font-semibold text-[#202124]" {...props} />,
-                  ul: ({node, ...props}) => <ul className="mb-2 ml-5 list-disc" {...props} />,
-                  ol: ({node, ...props}) => <ol className="mb-2 ml-5 list-decimal" {...props} />,
-                  li: ({node, ...props}) => <li className="mb-1" {...props} />
-                }}
-              >
-                {summary}
-              </ReactMarkdown>
+        <div className="transition-all duration-500 ease-in-out">
+          {showShimmer ? (
+            <div className="space-y-3 py-2">
+              <div className="h-4 w-full animate-pulse rounded-md bg-[#e8eaed]"></div>
+              <div className="h-4 w-[90%] animate-pulse rounded-md bg-[#e8eaed]"></div>
+              <div className="h-4 w-[75%] animate-pulse rounded-md bg-[#e8eaed]"></div>
             </div>
-            
-            {/* Tombol Toggle Ekspansi */}
-            {summary && (
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="mt-1 font-medium text-[#1a73e8] hover:underline focus:outline-none"
+          ) : error ? (
+            <p className="text-sm text-[#c5221f]">{error}</p>
+          ) : (
+            <div>
+              <div 
+                className={`text-[15px] leading-7 text-[#3c4043] transition-all duration-300 ${
+                  !isExpanded ? "line-clamp-6" : ""
+                }`}
               >
-                {isExpanded ? "Lebih Sedikit" : "Baca Selengkapnya"}
-              </button>
-            )}
-          </div>
-        )}
+                <ReactMarkdown
+                  components={{
+                    p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="mt-4 mb-2 text-[17px] font-semibold text-[#202124]" {...props} />,
+                    strong: ({node, ...props}) => <strong className="font-semibold text-[#202124]" {...props} />,
+                    ul: ({node, ...props}) => <ul className="mb-2 ml-5 list-disc" {...props} />,
+                    ol: ({node, ...props}) => <ol className="mb-2 ml-5 list-decimal" {...props} />,
+                    li: ({node, ...props}) => <li className="mb-1" {...props} />
+                  }}
+                >
+                  {displayedText}
+                </ReactMarkdown>
+              </div>
+              
+              {summary && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="mt-2 font-medium text-[#1a73e8] hover:underline focus:outline-none"
+                >
+                  {isExpanded ? "Lebih Sedikit" : "Baca Selengkapnya"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -225,13 +225,19 @@ function SearchInterface() {
                   </div>
                 )}
 
+                {(loading || response) && (
+                  <LlmSummary 
+                    query={loading ? urlQuery : response?.query || ""} 
+                    results={response?.results || []} 
+                    isSearchLoading={loading} 
+                  />
+                )}
+
                 {response ? (
                   <>
                     <p className="mb-6 text-sm text-[#70757a]">
                       Sekitar {response.total} hasil ({searchMeta ? formatDuration(searchMeta.durationMs) : "0,00"} detik) untuk &ldquo;{response.query}&rdquo;
                     </p>
-
-                    <LlmSummary query={response.query} results={response.results} />
 
                     <div className="space-y-8">
                       {response.results.map((item, index) => (
@@ -240,7 +246,7 @@ function SearchInterface() {
                     </div>
                   </>
                 ) : loading ? (
-                  <p className="text-sm text-[#70757a]">Mencari...</p>
+                  <p className="mb-6 text-sm text-[#70757a]">Mencari hadits...</p>
                 ) : null}
               </div>
             </section>
