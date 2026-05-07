@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/app/context/ThemeContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,8 +41,10 @@ export default function RootLayout({
         <meta name="color-scheme" content="light dark" />
       </head>
       <body className="min-h-full bg-background dark:bg-zinc-950 text-foreground dark:text-white transition-colors duration-300">
-        {children}
-        <Toaster />
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

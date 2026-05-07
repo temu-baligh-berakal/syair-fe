@@ -1,5 +1,8 @@
+"use client";
+
 import { motion } from "framer-motion";
-import { Settings } from "lucide-react";
+import { Settings, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "@/app/context/ThemeContext";
 import { SearchMode } from "@/app/types/search";
 import {
   Dialog,
@@ -28,6 +31,8 @@ interface SearchSettingsDialogProps {
   onCancel: () => void;
 }
 
+type Theme = "light" | "dark" | "system";
+
 export default function SearchSettingsDialog({
   open,
   onOpenChange,
@@ -38,6 +43,8 @@ export default function SearchSettingsDialog({
   onSave,
   onCancel,
 }: SearchSettingsDialogProps) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <>
       <motion.button
@@ -68,6 +75,45 @@ export default function SearchSettingsDialog({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
+            {/* Theme Setting */}
+            <div>
+              <label className="mb-3 block text-sm font-semibold text-foreground dark:text-white">
+                Tema
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["light", "dark", "system"] as const).map((themeOption) => (
+                  <motion.button
+                    key={themeOption}
+                    type="button"
+                    onClick={() => setTheme(themeOption)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 px-4 py-3 transition-all ${
+                      theme === themeOption
+                        ? "border-primary dark:border-sky-400 bg-primary/10 dark:bg-sky-500/10"
+                        : "border-border/40 dark:border-white/10 hover:border-primary/50 dark:hover:border-sky-400/50"
+                    }`}
+                  >
+                    {themeOption === "light" && (
+                      <Sun className={`h-5 w-5 ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
+                    )}
+                    {themeOption === "dark" && (
+                      <Moon className={`h-5 w-5 ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
+                    )}
+                    {themeOption === "system" && (
+                      <Monitor className={`h-5 w-5 ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
+                    )}
+                    <span className={`text-xs font-medium capitalize ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`}>
+                      {themeOption === "light" ? "Terang" : themeOption === "dark" ? "Gelap" : "Sistem"}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground dark:text-slate-500">
+                Pilih tema yang Anda inginkan untuk antarmuka aplikasi.
+              </p>
+            </div>
+
             {/* Search Mode */}
             <div>
               <label className="mb-3 block text-sm font-semibold text-foreground dark:text-white">
@@ -113,7 +159,7 @@ export default function SearchSettingsDialog({
                   max={50}
                   value={draftTopK}
                   onChange={(event) => setDraftTopK(Number(event.target.value))}
-                  className="flex-1 h-2 bg-muted dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-primary dark:accent-sky-400"
+                  className="flex-1 h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-gray-400 dark:accent-gray-500"
                 />
                 <motion.div
                   key={draftTopK}

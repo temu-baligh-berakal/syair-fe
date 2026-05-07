@@ -328,15 +328,6 @@ function SearchInterface() {
                   )}
                 </AnimatePresence>
 
-                {/* AI Summary */}
-                {(loading || response) && (
-                  <LlmSummary
-                    query={loading ? urlQuery : response?.query || ""}
-                    results={response?.results || []}
-                    isSearchLoading={loading}
-                  />
-                )}
-
                 {/* Results */}
                 <AnimatePresence mode="wait">
                   {response ? (
@@ -358,7 +349,7 @@ function SearchInterface() {
                       </motion.p>
 
                       <motion.div
-                        className="space-y-6"
+                        className="space-y-6 mb-10"
                         initial="hidden"
                         animate="visible"
                         variants={{
@@ -390,6 +381,15 @@ function SearchInterface() {
                     </motion.p>
                   ) : null}
                 </AnimatePresence>
+
+                {/* AI Summary */}
+                {(loading || response) && (
+                  <LlmSummary
+                    query={loading ? urlQuery : response?.query || ""}
+                    results={response?.results || []}
+                    isSearchLoading={loading}
+                  />
+                )}
               </motion.section>
             )}
           </AnimatePresence>
