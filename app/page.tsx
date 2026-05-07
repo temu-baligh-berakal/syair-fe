@@ -1,16 +1,15 @@
-// app/page.tsx
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
-// Komponen & Utilitas Internal
 import LlmSummary from "@/components/LlmSummary";
 import SearchResultItem from "@/components/SearchResultItem";
 import SearchSettingsDialog from "@/components/SearchSettingsDialog";
 import { SearchMode, SearchResponse, SearchMeta } from "@/app/types/search";
 import { formatDuration, normalizeMode, normalizeTopK } from "@/app/lib/search-helpers";
+import { Search } from "lucide-react";
 
 const exampleQueries = [
   "shalat berjamaah lebih utama",
@@ -32,7 +31,7 @@ function SearchInterface() {
   const [topK, setTopK] = useState(urlTopK);
   const [draftMode, setDraftMode] = useState<SearchMode>(urlMode);
   const [draftTopK, setDraftTopK] = useState(urlTopK);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<SearchResponse | null>(null);
@@ -157,21 +156,30 @@ function SearchInterface() {
     <>
       <main className="min-h-screen bg-white text-[#202124]">
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 pb-12 pt-6">
+
           {!showResults ? (
             <section className="flex flex-1 flex-col items-center justify-center pb-24">
               <img src="/assets/logo.png" alt="Syair" className="select-none w-[420px] max-w-full" />
+
               <form onSubmit={handleSubmit} className="mt-8 w-full max-w-3xl">
-                <div className="rounded-2xl border border-[#dfe1e5] px-5 py-3 shadow-sm hover:shadow-md focus-within:shadow-md">
+                {/* Search Bar Wrapper */}
+
+                <div className="flex w-full items-center rounded-full border border-[#dfe1e5] bg-white py-2 pl-6 pr-2 shadow-sm transition-shadow hover:shadow-md focus-within:shadow-md">
+                  <Search className="h-5 w-5 text-[#9aa0a6] mr-2" />
+
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Cari hadits..."
-                    className="w-full border-0 bg-transparent text-base outline-none"
+                    className="flex-1 border-0 bg-transparent text-base outline-none"
                   />
-                </div>
-                <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <button type="submit" disabled={loading} className="rounded bg-[#f8f9fa] px-4 py-2 text-sm text-[#3c4043] hover:border-[#dadce0] hover:shadow-sm disabled:opacity-60">
+                  {/* Tombol Search di dalam input */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="ml-3 flex items-center justify-center rounded-full bg-blue-100 px-6 py-2.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-60"
+                  >
                     {loading ? "Mencari..." : "Search"}
                   </button>
                 </div>
@@ -192,6 +200,7 @@ function SearchInterface() {
               )}
             </section>
           ) : (
+
             <section>
               <div className="flex items-start gap-4 border-b border-[#ebebeb] pb-6 pt-2">
                 <button type="button" onClick={() => router.push(pathname)} className="select-none pt-2">
@@ -199,18 +208,24 @@ function SearchInterface() {
                 </button>
 
                 <div className="w-full max-w-3xl">
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="rounded-2xl border border-[#dfe1e5] px-5 py-3 shadow-sm hover:shadow-md focus-within:shadow-md">
+                  <form onSubmit={handleSubmit} className="w-full">
+                    {/* Search Bar Wrapper */}
+                    <div className="flex w-full items-center rounded-full border border-[#dfe1e5] bg-white py-1.5 pl-6 pr-2 shadow-sm transition-shadow hover:shadow-md focus-within:shadow-md">
+                      {/* Ikon Search di Kiri */}
+                      <Search className="h-5 w-5 text-[#9aa0a6] mr-2" />
                       <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Cari hadits..."
-                        className="w-full border-0 bg-transparent text-base outline-none"
+                        className="flex-1 border-0 bg-transparent text-base outline-none"
                       />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-[#5f6368]">
-                      <button type="submit" disabled={loading} className="rounded bg-[#f8f9fa] px-4 py-2 text-[#3c4043] hover:shadow-sm">
+                      {/* Tombol Search di dalam input */}
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="ml-3 flex items-center justify-center rounded-full bg-blue-100 px-5 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-60"
+                      >
                         {loading ? "Mencari..." : "Search"}
                       </button>
                     </div>
@@ -226,10 +241,10 @@ function SearchInterface() {
                 )}
 
                 {(loading || response) && (
-                  <LlmSummary 
-                    query={loading ? urlQuery : response?.query || ""} 
-                    results={response?.results || []} 
-                    isSearchLoading={loading} 
+                  <LlmSummary
+                    query={loading ? urlQuery : response?.query || ""}
+                    results={response?.results || []}
+                    isSearchLoading={loading}
                   />
                 )}
 
