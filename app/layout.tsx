@@ -47,14 +47,20 @@ export default function RootLayout({
             var theme = localStorage.getItem('theme') || 'system';
             var isDark = theme === 'dark' || 
               (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            if (isDark) document.documentElement.classList.add('dark');
+            var root = document.documentElement;
+            root.classList.remove('light', 'dark');
+            if (isDark) {
+              root.classList.add('dark');
+            } else {
+              root.classList.add('light');
+            }
           } catch(e) {}
         })();
       `,
           }}
         />
       </head>
-      <body className="min-h-full bg-background dark:bg-zinc-950 text-foreground dark:text-white transition-colors duration-300">
+      <body className="min-h-full bg-background text-foreground transition-colors duration-300">
         <ThemeProvider>
           {children}
           <Toaster />
