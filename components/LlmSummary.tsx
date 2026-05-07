@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import { Sparkles } from "lucide-react";
 
 type SearchResult = {
   nama_perawi: string;
@@ -15,7 +17,7 @@ type SearchResult = {
 export default function LlmSummary({
   query,
   results,
-  isSearchLoading = false, // TAMBAHAN PROPS BARU
+  isSearchLoading = false,
 }: {
   query: string;
   results: SearchResult[];
@@ -31,7 +33,6 @@ export default function LlmSummary({
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // 1. Jika aplikasi sedang fetch ke OpenSearch, paksa mode Shimmer
     if (isSearchLoading) {
       setLoading(true);
       setError(null);
@@ -42,19 +43,17 @@ export default function LlmSummary({
       return;
     }
 
-    // 2. Jika fetch OpenSearch selesai tapi hasil kosong, hilangkan Shimmer
     if (!query || !results || results.length === 0) {
       setLoading(false);
       return;
     }
 
-    // 3. Jika OpenSearch berhasil menemukan hasil, mulai fetch ke LLM
     const abortController = new AbortController();
 
     async function fetchSummary() {
       setLoading(true);
       setError(null);
-      
+
       try {
         const top3 = results.slice(0, 3).map((item) => ({
           nama_perawi: item.nama_perawi,
@@ -77,13 +76,13 @@ export default function LlmSummary({
 
         const data = await res.json();
         let text = data.summary;
-        
+
         try {
           const parsed = JSON.parse(text);
           if (parsed.summary) text = parsed.summary;
         } catch (e) {}
 
-        text = text.replace(/\\n/g, '\n');
+        text = text.replace(/\\n/g, "\n");
         setSummary(text);
       } catch (err: any) {
         if (err.name === "AbortError") return;
@@ -99,9 +98,8 @@ export default function LlmSummary({
       abortController.abort();
       if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
     };
-  }, [query, results, isSearchLoading]); // Tambahkan isSearchLoading sebagai dependency
+  }, [query, results, isSearchLoading]);
 
-  // Logika Animasi Mengetik
   useEffect(() => {
     if (summary && !loading) {
       setIsTyping(true);
@@ -121,64 +119,128 @@ export default function LlmSummary({
     }
   }, [summary, loading]);
 
-  // Sembunyikan component HANYA jika sedang tidak ada proses sama sekali
-  if (!isSearchLoading && !loading && !summary && !error && !isTyping) return null;
+  if (!isSearchLoading && !loading && !summary && !error && !isTyping)
+    return null;
 
-  // Gabungan status loading (OpenSearch loading ATAU LLM loading)
   const showShimmer = isSearchLoading || loading;
 
   return (
-    <div className="mb-8 overflow-hidden rounded-2xl border border-[#dadce0] bg-gradient-to-br from-[#f8f9fa] to-[#e8eaed] p-[1px] shadow-sm transition-all duration-500 ease-in-out">
-      <div className="rounded-[15px] bg-white p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#1a73e8]">
-            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
-          </svg>
-          <h3 className="text-[16px] font-medium text-[#202124]">Ringkasan AI</h3>
-        </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key="summary-container"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -16 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="mb-8 overflow-hidden rounded-xl border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm dark:shadow-xl dark:shadow-black/20"
+      >
+        <div className="p-5 sm:p-6">
+          {/* Header */}
+          <motion.div
+            className="mb-4 flex items-center gap-2.5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Sparkles className="h-5 w-5 text-primary dark:text-sky-400" />
+            </motion.div>
+            <h3 className="text-base font-semibold text-foreground dark:text-white">
+              Ringkasan AI
+            </h3>
+          </motion.div>
 
-        <div className="transition-all duration-500 ease-in-out">
-          {showShimmer ? (
-            <div className="space-y-3 py-2">
-              <div className="h-4 w-full animate-pulse rounded-md bg-[#e8eaed]"></div>
-              <div className="h-4 w-[90%] animate-pulse rounded-md bg-[#e8eaed]"></div>
-              <div className="h-4 w-[75%] animate-pulse rounded-md bg-[#e8eaed]"></div>
-            </div>
-          ) : error ? (
-            <p className="text-sm text-[#c5221f]">{error}</p>
-          ) : (
-            <div>
-              <div 
-                className={`text-[15px] leading-7 text-[#3c4043] transition-all duration-300 ${
-                  !isExpanded ? "line-clamp-6" : ""
-                }`}
+          {/* Content */}
+          <AnimatePresence mode="wait">
+            {showShimmer ? (
+              <motion.div
+                key="shimmer"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-3 py-2"
               >
-                <ReactMarkdown
-                  components={{
-                    p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="mt-4 mb-2 text-[17px] font-semibold text-[#202124]" {...props} />,
-                    strong: ({node, ...props}) => <strong className="font-semibold text-[#202124]" {...props} />,
-                    ul: ({node, ...props}) => <ul className="mb-2 ml-5 list-disc" {...props} />,
-                    ol: ({node, ...props}) => <ol className="mb-2 ml-5 list-decimal" {...props} />,
-                    li: ({node, ...props}) => <li className="mb-1" {...props} />
-                  }}
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ opacity: [0.5, 0.8, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+                    className="h-4 rounded-lg bg-muted dark:bg-zinc-700"
+                    style={{ width: `${100 - i * 15}%` }}
+                  />
+                ))}
+              </motion.div>
+            ) : error ? (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-4"
+              >
+                <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                  {error}
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div
+                  className={`text-sm sm:text-base leading-relaxed text-foreground/80 dark:text-slate-300 transition-all duration-300 ${
+                    !isExpanded ? "line-clamp-6" : ""
+                  }`}
+                  layout
+                  initial={false}
                 >
-                  {displayedText}
-                </ReactMarkdown>
-              </div>
-              
-              {summary && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="mt-2 font-medium text-[#1a73e8] hover:underline focus:outline-none"
-                >
-                  {isExpanded ? "Lebih Sedikit" : "Baca Selengkapnya"}
-                </button>
-              )}
-            </div>
-          )}
+                  <ReactMarkdown
+                    components={{
+                      p: ({ node, ...props }) => (
+                        <p className="mb-3 last:mb-0" {...props} />
+                      ),
+                      h3: ({ node, ...props }) => (
+                        <h3
+                          className="mt-4 mb-2 text-base font-semibold text-foreground dark:text-white"
+                          {...props}
+                        />
+                      ),
+                      strong: ({ node, ...props }) => (
+                        <strong className="font-semibold text-foreground dark:text-white" {...props} />
+                      ),
+                      ul: ({ node, ...props }) => (
+                        <ul className="mb-3 ml-5 list-disc space-y-1" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol className="mb-3 ml-5 list-decimal space-y-1" {...props} />
+                      ),
+                      li: ({ node, ...props }) => <li className="mb-0" {...props} />,
+                    }}
+                  >
+                    {displayedText}
+                  </ReactMarkdown>
+                </motion.div>
+
+                {summary && (
+                  <motion.button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary dark:text-sky-400 hover:text-primary/80 dark:hover:text-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-lg px-2 py-1 transition-colors"
+                    aria-label={isExpanded ? "Collapse summary" : "Expand summary"}
+                  >
+                    {isExpanded ? "Lebih Sedikit" : "Baca Selengkapnya"}
+                  </motion.button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

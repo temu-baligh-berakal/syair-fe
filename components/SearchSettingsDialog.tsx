@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+import { Settings } from "lucide-react";
 import { SearchMode } from "@/app/types/search";
 import {
   Dialog,
@@ -14,15 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-function SettingsIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35A1.724 1.724 0 0 0 5.382 7.753c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 0 0 2.573-1.066Z" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
 
 interface SearchSettingsDialogProps {
   open: boolean;
@@ -47,61 +40,115 @@ export default function SearchSettingsDialog({
 }: SearchSettingsDialogProps) {
   return (
     <>
-      <button
+      <motion.button
         type="button"
         aria-label="Buka pengaturan pencarian"
         onClick={() => onOpenChange(true)}
-        className="fixed bottom-6 right-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed bottom-6 right-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary dark:bg-sky-500 text-primary-foreground dark:text-white shadow-lg dark:shadow-sky-500/20 transition-all duration-300 hover:shadow-xl dark:hover:shadow-lg dark:hover:shadow-sky-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <SettingsIcon />
-      </button>
+        <Settings className="h-5 w-5" />
+      </motion.button>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/95 backdrop-blur">
           <DialogHeader>
-            <DialogTitle>Pengaturan pencarian</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-foreground dark:text-white">
+              Pengaturan Pencarian
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground dark:text-slate-400">
               Atur mode pencarian dan jumlah hasil yang dikembalikan.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-6 space-y-5">
+          <motion.div
+            className="mt-6 space-y-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Search Mode */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Mode search</label>
-              <Select value={draftMode} onValueChange={(value) => setDraftMode(value as SearchMode)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih mode search" />
+              <label className="mb-3 block text-sm font-semibold text-foreground dark:text-white">
+                Mode Pencarian
+              </label>
+              <Select
+                value={draftMode}
+                onValueChange={(value) => setDraftMode(value as SearchMode)}
+              >
+                <SelectTrigger className="rounded-lg border-border/40 dark:border-white/10 bg-muted dark:bg-zinc-800 text-foreground dark:text-white hover:border-primary/40 dark:hover:border-sky-400/40 focus:ring-primary/50 dark:focus:ring-sky-400/50">
+                  <SelectValue placeholder="Pilih mode pencarian" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hybrid">Hybrid Search</SelectItem>
-                  <SelectItem value="knn">Semantic KNN</SelectItem>
-                  <SelectItem value="bm25">Keyword BM25</SelectItem>
+                <SelectContent className="border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900 backdrop-blur">
+                  <SelectItem value="hybrid" className="dark:focus:bg-zinc-800">
+                    Hybrid Search
+                  </SelectItem>
+                  <SelectItem value="knn" className="dark:focus:bg-zinc-800">
+                    Semantic KNN
+                  </SelectItem>
+                  <SelectItem value="bm25" className="dark:focus:bg-zinc-800">
+                    Keyword BM25
+                  </SelectItem>
                 </SelectContent>
               </Select>
+              <p className="mt-2 text-xs text-muted-foreground dark:text-slate-500">
+                Pilih strategi pencarian yang paling sesuai untuk kebutuhan Anda.
+              </p>
             </div>
 
+            {/* Top K Setting */}
             <div>
-              <label htmlFor="top-k" className="mb-2 block text-sm font-medium text-slate-700">Jumlah item</label>
-              <input
-                id="top-k"
-                type="number"
-                min={1}
-                max={50}
-                value={draftTopK}
-                onChange={(event) => setDraftTopK(Number(event.target.value))}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-              />
-              <p className="mt-2 text-xs text-slate-500">Nilai yang didukung backend: 1 sampai 50.</p>
+              <label
+                htmlFor="top-k"
+                className="mb-3 block text-sm font-semibold text-foreground dark:text-white"
+              >
+                Jumlah Hasil
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  id="top-k"
+                  type="range"
+                  min={1}
+                  max={50}
+                  value={draftTopK}
+                  onChange={(event) => setDraftTopK(Number(event.target.value))}
+                  className="flex-1 h-2 bg-muted dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-primary dark:accent-sky-400"
+                />
+                <motion.div
+                  key={draftTopK}
+                  initial={{ scale: 1.2, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="min-w-12 rounded-lg bg-primary/10 dark:bg-sky-500/10 px-3 py-2 text-center text-sm font-semibold text-primary dark:text-sky-400"
+                >
+                  {draftTopK}
+                </motion.div>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground dark:text-slate-500">
+                Backend mendukung 1 sampai 50 hasil.
+              </p>
             </div>
-          </div>
+          </motion.div>
 
-          <DialogFooter className="mt-6">
-            <button type="button" onClick={onCancel} className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200">
+          <DialogFooter className="mt-8 gap-3 sm:gap-0">
+            <motion.button
+              type="button"
+              onClick={onCancel}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="rounded-lg bg-muted dark:bg-zinc-800 px-4 py-2.5 text-sm font-medium text-foreground dark:text-white transition-colors hover:bg-muted/80 dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
               Batal
-            </button>
-            <button type="button" onClick={onSave} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={onSave}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="rounded-lg bg-primary dark:bg-sky-500 px-4 py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-colors hover:bg-primary/90 dark:hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
               Simpan
-            </button>
+            </motion.button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
