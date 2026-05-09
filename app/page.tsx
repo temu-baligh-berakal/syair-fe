@@ -156,168 +156,170 @@ function SearchInterface() {
   return (
     <>
       <main className="min-h-screen bg-gradient-to-br from-white via-sky-100/60 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-black text-foreground dark:text-white transition-colors duration-500">
-        <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 sm:px-6 pb-12 pt-6">
-          <AnimatePresence mode="wait">
-            {!showResults ? (
-              <motion.section
-                key="hero"
+        <AnimatePresence mode="wait">
+          {!showResults ? (
+            <motion.section
+              key="hero"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              // Pindahkan pembatas ukuran dan padding ke sini
+              className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 sm:px-6 pb-24"
+            >
+              {/* Logo */}
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              >
+                <img
+                  src="/assets/logo.png"
+                  alt="Syair"
+                  className="select-none w-40 sm:w-56 h-auto"
+                />
+              </motion.div>
+
+              {/* Tagline */}
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="mt-4 text-center text-sm sm:text-base text-muted-foreground dark:text-slate-400 max-w-md"
+              >
+                Jelajahi koleksi Hadits dengan teknologi pencarian semantic dan AI-powered
+              </motion.p>
+
+              {/* Search Form */}
+              <motion.form
+                onSubmit={handleSubmit}
+                className="mt-10 sm:mt-12 w-full max-w-2xl"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
+              >
+                <div className="flex w-full items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/80 px-6 py-3 sm:py-4 shadow-sm dark:shadow-xl dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
+                  <Search className="h-5 w-5 text-muted-foreground dark:text-slate-500 flex-shrink-0" />
+
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Cari hadits..."
+                    className="flex-1 border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
+                    autoFocus
+                  />
+
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="ml-2 flex items-center justify-center rounded-full bg-primary dark:bg-sky-500 px-6 sm:px-8 py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "Mencari..." : "Cari"}
+                  </motion.button>
+                </div>
+              </motion.form>
+
+              {/* Example Queries */}
+              <motion.div
+                className="mt-8 flex flex-wrap justify-center gap-2"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="flex flex-1 flex-col items-center justify-center pb-24 py-12 sm:py-20"
+                transition={{ delay: 0.4 }}
               >
-                {/* Logo */}
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                >
-                  <img
-                    src="/assets/logo.png"
-                    alt="Syair"
-                    className="select-none w-40 sm:w-56 h-auto"
-                  />
-                </motion.div>
+                {exampleQueries.map((example, idx) => (
+                  <motion.button
+                    key={example}
+                    type="button"
+                    onClick={() => setQuery(example)}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.45 + idx * 0.08 }}
+                    className="rounded-full bg-muted dark:bg-zinc-800/50 border border-border/40 dark:border-white/10 px-4 py-2 text-xs sm:text-sm text-foreground dark:text-slate-300 transition-all hover:bg-muted/80 dark:hover:bg-zinc-700/50 hover:border-primary/20 dark:hover:border-sky-400/30"
+                  >
+                    {example}
+                  </motion.button>
+                ))}
+              </motion.div>
 
-                {/* Tagline */}
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.4 }}
-                  className="mt-4 text-center text-sm sm:text-base text-muted-foreground dark:text-slate-400 max-w-md"
-                >
-                  Jelajahi koleksi Hadits dengan teknologi pencarian semantic dan AI-powered
-                </motion.p>
-
-                {/* Search Form */}
-                <motion.form
-                  onSubmit={handleSubmit}
-                  className="mt-10 sm:mt-12 w-full max-w-2xl"
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.4 }}
-                >
-                  <div className="flex w-full items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/80 px-6 py-3 sm:py-4 shadow-sm dark:shadow-xl dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
-                    <Search className="h-5 w-5 text-muted-foreground dark:text-slate-500 flex-shrink-0" />
-
-                    <input
-                      type="text"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Cari hadits..."
-                      className="flex-1 border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
-                      autoFocus
-                    />
-
-                    <motion.button
-                      type="submit"
-                      disabled={loading}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="ml-2 flex items-center justify-center rounded-full bg-primary dark:bg-sky-500 px-6 sm:px-8 py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {loading ? "Mencari..." : "Cari"}
-                    </motion.button>
-                  </div>
-                </motion.form>
-
-                {/* Example Queries */}
-                <motion.div
-                  className="mt-8 flex flex-wrap justify-center gap-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  {exampleQueries.map((example, idx) => (
-                    <motion.button
-                      key={example}
-                      type="button"
-                      onClick={() => setQuery(example)}
-                      whileHover={{ scale: 1.05, y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.45 + idx * 0.08 }}
-                      className="rounded-full bg-muted dark:bg-zinc-800/50 border border-border/40 dark:border-white/10 px-4 py-2 text-xs sm:text-sm text-foreground dark:text-slate-300 transition-all hover:bg-muted/80 dark:hover:bg-zinc-700/50 hover:border-primary/20 dark:hover:border-sky-400/30"
-                    >
-                      {example}
-                    </motion.button>
-                  ))}
-                </motion.div>
-
-                {/* Error Message */}
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="mt-8 w-full max-w-2xl rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-5 py-4 text-sm font-medium text-red-700 dark:text-red-400"
-                    >
-                      {error}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.section>
-            ) : (
-              <motion.section
-                key="results"
-                initial={{ opacity: 0, y: 20 }}
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="mt-8 w-full max-w-2xl rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-5 py-4 text-sm font-medium text-red-700 dark:text-red-400"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.section>
+          ) : (
+            <motion.section
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4 }}
+              className="w-full min-h-screen flex flex-col"
+            >
+              {/* Header with logo and search - SEKARANG FULL WIDTH DAN MENEMPEL ATAS */}
+              <motion.div
+                className="sticky top-0 z-40 w-full border-b border-border/40 dark:border-white/10 bg-background/80 dark:bg-zinc-950/80 px-4 sm:px-6 py-4 backdrop-blur-md"
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.4 }}
-                className="w-full"
+                transition={{ duration: 0.3 }}
               >
-                {/* Header with logo and search */}
-                <motion.div
-                  className="sticky top-0 z-40 -mx-4 sm:-mx-6 mb-8 border-b border-border/40 dark:border-white/10 bg-background/80 dark:bg-zinc-950/80 px-4 sm:px-6 py-4 backdrop-blur-md"
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="max-w-5xl mx-auto flex items-center gap-3 sm:gap-4">
-                    <motion.button
-                      type="button"
-                      onClick={() => router.push(pathname)}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="flex-shrink-0 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      aria-label="Back to home"
-                    >
-                      <img 
-                        src="/assets/logo.png" 
-                        alt="Syair" 
-                        className="h-7 sm:h-8 w-auto object-contain select-none" 
-                      />
-                    </motion.button>
+                <div className="max-w-5xl mx-auto flex items-center gap-3 sm:gap-4">
+                  <motion.button
+                    type="button"
+                    onClick={() => router.push(pathname)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="hidden sm:block flex-shrink-0 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    aria-label="Back to home"
+                  >
+                    <img 
+                      src="/assets/logo.png" 
+                      alt="Syair" 
+                      className="h-7 sm:h-8 w-auto object-contain select-none" 
+                    />
+                  </motion.button>
 
-                    <div className="w-full max-w-2xl">
-                      <form onSubmit={handleSubmit} className="w-full">
-                        <div className="flex w-full items-center gap-2 rounded-lg border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/50 px-4 py-2.5 shadow-sm dark:shadow-lg dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
-                          <Search className="h-4 w-4 text-muted-foreground dark:text-slate-500 flex-shrink-0" />
-                          <input
-                            type="text"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Cari hadits..."
-                            className="flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
-                          />
-                          <motion.button
-                            type="submit"
-                            disabled={loading}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="ml-2 flex items-center justify-center rounded-lg bg-primary dark:bg-sky-500 px-4 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                            {loading ? "..." : "Cari"}
-                          </motion.button>
-                        </div>
-                      </form>
-                    </div>
+                  <div className="w-full max-w-2xl">
+                    <form onSubmit={handleSubmit} className="w-full">
+                      <div className="flex w-full items-center gap-2 rounded-lg border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/50 px-4 py-2.5 shadow-sm dark:shadow-lg dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
+                        <Search className="h-4 w-4 text-muted-foreground dark:text-slate-500 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          placeholder="Cari hadits..."
+                          className="flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
+                        />
+                        <motion.button
+                          type="submit"
+                          disabled={loading}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="ml-2 flex items-center justify-center rounded-lg bg-primary dark:bg-sky-500 px-4 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {loading ? "..." : "Cari"}
+                        </motion.button>
+                      </div>
+                    </form>
                   </div>
-                </motion.div>
+                </div>
+              </motion.div>
 
+              {/* Konten Hasil - DIKEMBALIKAN KE UKURAN MAX-W-5XL AGAR RAPI DI TENGAH */}
+              <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 py-8 pb-12">
                 {/* Error Message */}
                 <AnimatePresence>
                   {error && (
@@ -332,14 +334,15 @@ function SearchInterface() {
                   )}
                 </AnimatePresence>
 
-                
                 {/* AI Summary */}
                 {(loading || response) && (
-                  <LlmSummary
-                    query={loading ? urlQuery : response?.query || ""}
-                    results={response?.results || []}
-                    isSearchLoading={loading}
-                  />
+                  <div className="mb-8">
+                    <LlmSummary
+                      query={loading ? urlQuery : response?.query || ""}
+                      results={response?.results || []}
+                      isSearchLoading={loading}
+                    />
+                  </div>
                 )}
 
                 {/* Results */}
@@ -353,7 +356,7 @@ function SearchInterface() {
                       transition={{ duration: 0.3 }}
                     >
                       <motion.p
-                        className="mb-8 text-sm text-muted-foreground dark:text-slate-400"
+                        className="mb-6 text-sm text-muted-foreground dark:text-slate-400"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.2 }}
@@ -363,7 +366,7 @@ function SearchInterface() {
                       </motion.p>
 
                       <motion.div
-                        className="space-y-6 mb-10"
+                        className="space-y-6"
                         initial="hidden"
                         animate="visible"
                         variants={{
@@ -395,11 +398,10 @@ function SearchInterface() {
                     </motion.p>
                   ) : null}
                 </AnimatePresence>
-
-              </motion.section>
-            )}
-          </AnimatePresence>
-        </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
       </main>
 
       <SearchSettingsDialog
