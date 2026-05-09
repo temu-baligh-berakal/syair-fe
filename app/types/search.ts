@@ -7,6 +7,7 @@ export type SearchResult = {
   arab: string;
   terjemahan: string;
   score: number;
+  preview: string;
 };
 
 export type SearchResponse = {

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { SearchResult } from "@/app/types/search";
 
 export default function SearchResultItem({
@@ -54,16 +55,26 @@ export default function SearchResultItem({
         </p>
       </motion.div>
 
-      {/* Translation */}
+      {/* Preview Snippet with Highlight */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="mt-5"
       >
-        <p className="text-sm sm:text-base leading-relaxed text-foreground/80 dark:text-slate-300">
-          {item.terjemahan}
-        </p>
+        <div className="text-sm sm:text-base leading-relaxed text-foreground/80 dark:text-slate-300">
+          <ReactMarkdown
+            components={{
+              // Menangkap tag <strong> dari markdown **bold** dan memberinya warna biru/sky
+              strong: ({ node, ...props }) => (
+                <span className="font-semibold text-primary dark:text-sky-400" {...props} />
+              ),
+            }}
+          >
+            {/* Fallback ke terjemahan utuh jika preview kosong */}
+            {item.preview || item.terjemahan}
+          </ReactMarkdown>
+        </div>
       </motion.div>
     </motion.article>
   );
