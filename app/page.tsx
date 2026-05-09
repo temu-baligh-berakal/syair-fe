@@ -155,7 +155,7 @@ function SearchInterface() {
 
   return (
     <>
-      <main className="min-h-screen bg-background dark:bg-gradient-to-br dark:from-zinc-950 dark:via-zinc-900 dark:to-black text-foreground dark:text-white transition-colors duration-300">
+      <main className="min-h-screen bg-gradient-to-br from-white via-sky-100/60 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-black text-foreground dark:text-white transition-colors duration-500">
         <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 sm:px-6 pb-12 pt-6">
           <AnimatePresence mode="wait">
             {!showResults ? (

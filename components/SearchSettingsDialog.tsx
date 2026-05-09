@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Settings, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -44,6 +45,22 @@ export default function SearchSettingsDialog({
   onCancel,
 }: SearchSettingsDialogProps) {
   const { theme, setTheme } = useTheme();
+  
+  // State draft khusus untuk tema
+  const [draftTheme, setDraftTheme] = useState<Theme>(theme);
+
+  // Sync draftTheme dengan actual theme saat dialog dibuka
+  useEffect(() => {
+    if (open) {
+      setDraftTheme(theme);
+    }
+  }, [open, theme]);
+
+  // Handle logika tombol "Simpan"
+  const handleSave = () => {
+    setTheme(draftTheme); // Set tema sesungguhnya di sini
+    onSave();             // Lanjutkan proses save parameter pencarian
+  };
 
   return (
     <>
@@ -85,25 +102,25 @@ export default function SearchSettingsDialog({
                   <motion.button
                     key={themeOption}
                     type="button"
-                    onClick={() => setTheme(themeOption)}
+                    onClick={() => setDraftTheme(themeOption)} // Ubah draft, bukan actual theme
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`flex flex-col items-center gap-2 rounded-lg border-2 px-4 py-3 transition-all ${
-                      theme === themeOption
+                      draftTheme === themeOption
                         ? "border-primary dark:border-sky-400 bg-primary/10 dark:bg-sky-500/10"
                         : "border-border/40 dark:border-white/10 hover:border-primary/50 dark:hover:border-sky-400/50"
                     }`}
                   >
                     {themeOption === "light" && (
-                      <Sun className={`h-5 w-5 ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
+                      <Sun className={`h-5 w-5 ${draftTheme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
                     )}
                     {themeOption === "dark" && (
-                      <Moon className={`h-5 w-5 ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
+                      <Moon className={`h-5 w-5 ${draftTheme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
                     )}
                     {themeOption === "system" && (
-                      <Monitor className={`h-5 w-5 ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
+                      <Monitor className={`h-5 w-5 ${draftTheme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`} />
                     )}
-                    <span className={`text-xs font-medium capitalize ${theme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`}>
+                    <span className={`text-xs font-medium capitalize ${draftTheme === themeOption ? "text-primary dark:text-sky-400" : "text-muted-foreground dark:text-slate-500"}`}>
                       {themeOption === "light" ? "Terang" : themeOption === "dark" ? "Gelap" : "Sistem"}
                     </span>
                   </motion.button>
@@ -188,7 +205,7 @@ export default function SearchSettingsDialog({
             </motion.button>
             <motion.button
               type="button"
-              onClick={onSave}
+              onClick={handleSave} // Diubah untuk menggunakan function handleSave
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="rounded-lg bg-primary dark:bg-sky-500 px-4 py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-colors hover:bg-primary/90 dark:hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
