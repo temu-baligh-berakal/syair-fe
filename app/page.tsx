@@ -328,6 +328,16 @@ function SearchInterface() {
                   )}
                 </AnimatePresence>
 
+                
+                {/* AI Summary */}
+                {(loading || response) && (
+                  <LlmSummary
+                    query={loading ? urlQuery : response?.query || ""}
+                    results={response?.results || []}
+                    isSearchLoading={loading}
+                  />
+                )}
+
                 {/* Results */}
                 <AnimatePresence mode="wait">
                   {response ? (
@@ -382,14 +392,6 @@ function SearchInterface() {
                   ) : null}
                 </AnimatePresence>
 
-                {/* AI Summary */}
-                {(loading || response) && (
-                  <LlmSummary
-                    query={loading ? urlQuery : response?.query || ""}
-                    results={response?.results || []}
-                    isSearchLoading={loading}
-                  />
-                )}
               </motion.section>
             )}
           </AnimatePresence>
