@@ -14,18 +14,24 @@ type SearchResult = {
   score: number;
 };
 
-export default function LlmSummary({
-  query,
-  results,
-  isSearchLoading = false,
-}: {
+interface LlmSummaryProps {
   query: string;
-  results: SearchResult[];
-  isSearchLoading?: boolean;
-}) {
-  const [summary, setSummary] = useState<string | null>(null);
+  results: any[];
+  isSearchLoading: boolean;
+  cachedSummary?: string | null; // Tambahkan prop ini
+  onSummaryGenerated?: (summary: string) => void; // Tambahkan prop ini
+}
+
+export default function LlmSummary({ 
+  query, 
+  results, 
+  isSearchLoading, 
+  cachedSummary, 
+  onSummaryGenerated 
+}: LlmSummaryProps) {
+  const [summary, setSummary] = useState<string | null>(cachedSummary || null);
+  const [loading, setLoading] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
-  const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -34,71 +40,42 @@ export default function LlmSummary({
 
   useEffect(() => {
     if (isSearchLoading) {
-      setLoading(true);
-      setError(null);
       setSummary(null);
       setDisplayedText("");
-      setIsTyping(false);
       setIsExpanded(false);
       return;
     }
 
-    if (!query || !results || results.length === 0) {
-      setLoading(false);
+    // 2. Jika tidak ada hasil, jangan lakukan apa-apa
+    if (results.length === 0) return;
+
+    // 3. Jika parent mengirimkan cachedSummary, langsung gunakan tanpa fetch
+    if (cachedSummary) {
+      setSummary(cachedSummary);
       return;
     }
 
-    const abortController = new AbortController();
-
     async function fetchSummary() {
       setLoading(true);
-      setError(null);
-
       try {
-        const top3 = results.slice(0, 3).map((item) => ({
-          nama_perawi: item.nama_perawi,
-          nomor_hadits: item.nomor_hadits,
-          referensi_lengkap: item.referensi_lengkap,
-          terjemahan: item.terjemahan,
-        }));
-
-        const res = await fetch("/api/llm/summarize", {
+        const res = await fetch("/api/llm/summarize", { // Pastikan endpoint API Anda sesuai
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, hadits_results: top3 }),
-          signal: abortController.signal,
+          body: JSON.stringify({ query, hadits_results: results }),
         });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          throw new Error(errData?.detail || "Gagal mendapatkan ringkasan AI.");
-        }
-
         const data = await res.json();
-        let text = data.summary;
-
-        try {
-          const parsed = JSON.parse(text);
-          if (parsed.summary) text = parsed.summary;
-        } catch (e) {}
-
-        text = text.replace(/\\n/g, "\n");
-        setSummary(text);
-      } catch (err: any) {
-        if (err.name === "AbortError") return;
-        setError(err.message);
+        setSummary(data.summary);
+        
+        onSummaryGenerated?.(data.summary);
+      } catch (err) {
+        console.error("Gagal rangkum:", err);
       } finally {
         setLoading(false);
       }
     }
 
     fetchSummary();
-
-    return () => {
-      abortController.abort();
-      if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
-    };
-  }, [query, results, isSearchLoading]);
+  }, [isSearchLoading, results, cachedSummary, query]);
 
   useEffect(() => {
     if (summary && !loading) {

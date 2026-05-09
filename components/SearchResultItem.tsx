@@ -14,11 +14,14 @@ export default function SearchResultItem({
   const searchParams = useSearchParams();
   const currentQuery = searchParams.get("q") || "";
 
-  // Navigasi ke detail dengan membawa query pencarian untuk highlight
   const detailUrl = `/hadits/${item.nama_perawi.toLowerCase()}/${item.nomor_hadits}?q=${encodeURIComponent(currentQuery)}`;
 
+  const handleSaveToSession = () => {
+    sessionStorage.setItem("selectedHadits", JSON.stringify(item));
+  };
+
   return (
-    <Link href={detailUrl} className="block no-underline">
+    <Link href={detailUrl} className="block no-underline" onClick={handleSaveToSession}>
       <motion.article
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -32,7 +35,7 @@ export default function SearchResultItem({
             {item.nama_perawi}
           </p>
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 dark:bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-primary dark:text-sky-400">
-            {(item.score * 100).toFixed(1)}%
+            {item.score}
           </span>
         </div>
 
