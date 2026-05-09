@@ -282,10 +282,14 @@ function SearchInterface() {
                       onClick={() => router.push(pathname)}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="flex-shrink-0 rounded-lg p-2 hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
+                      className="flex-shrink-0 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       aria-label="Back to home"
                     >
-                      <ArrowLeft className="h-5 w-5" />
+                      <img 
+                        src="/assets/logo.png" 
+                        alt="Syair" 
+                        className="h-7 sm:h-8 w-auto object-contain select-none" 
+                      />
                     </motion.button>
 
                     <div className="w-full max-w-2xl">
