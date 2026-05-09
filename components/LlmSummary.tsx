@@ -58,15 +58,27 @@ export default function LlmSummary({
     async function fetchSummary() {
       setLoading(true);
       try {
-        const res = await fetch("/api/llm/summarize", { // Pastikan endpoint API Anda sesuai
+        const res = await fetch("/api/llm/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query, hadits_results: results }),
         });
         const data = await res.json();
-        setSummary(data.summary);
         
-        onSummaryGenerated?.(data.summary);
+        let cleanText = data.summary;
+        
+        if (typeof cleanText === 'string') {
+          if (cleanText.startsWith('"') && cleanText.endsWith('"')) {
+            cleanText = cleanText.slice(1, -1);
+          }
+          
+          cleanText = cleanText.replace(/\\n/g, '\n');
+          
+          cleanText = cleanText.replace(/\\"/g, '"');
+        }
+
+        setSummary(cleanText);
+        onSummaryGenerated?.(cleanText);
       } catch (err) {
         console.error("Gagal rangkum:", err);
       } finally {
