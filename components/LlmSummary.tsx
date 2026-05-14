@@ -27,8 +27,20 @@ export default function LlmSummary({
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [shouldAnimateTyping, setShouldAnimateTyping] = useState(false);
 
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const updateTypingMode = () => setShouldAnimateTyping(!mediaQuery.matches);
+
+    updateTypingMode();
+    mediaQuery.addEventListener("change", updateTypingMode);
+    return () => mediaQuery.removeEventListener("change", updateTypingMode);
+  }, []);
 
   useEffect(() => {
     if (isSearchLoading) {
@@ -120,16 +132,24 @@ export default function LlmSummary({
 
   useEffect(() => {
     if (summary && !loading) {
+      if (!shouldAnimateTyping) {
+        if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+        setDisplayedText(summary);
+        setIsTyping(false);
+        return;
+      }
+
       setIsTyping(true);
       let index = 0;
-      const speed = 5;
+      const chunkSize = 8;
+      const speed = 24;
 
       if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
 
       typingIntervalRef.current = setInterval(() => {
+        index = Math.min(summary.length, index + chunkSize);
         setDisplayedText(summary.slice(0, index));
-        index++;
-        if (index > summary.length) {
+        if (index >= summary.length) {
           if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
           setIsTyping(false);
         }
@@ -139,7 +159,7 @@ export default function LlmSummary({
         if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
       };
     }
-  }, [summary, loading]);
+  }, [summary, loading, shouldAnimateTyping]);
 
   // Hanya hide jika benar-benar tidak ada state apapun yang aktif
   if (!isSearchLoading && !loading && !summary && !error && !isTyping) {

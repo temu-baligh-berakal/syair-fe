@@ -1,19 +1,18 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { SearchResult } from "@/app/types/search";
 
-export default function SearchResultItem({
+function SearchResultItem({
   item,
   index = 0,
+  currentQuery = "",
 }: {
   item: SearchResult;
   index?: number;
+  currentQuery?: string;
 }) {
-  const searchParams = useSearchParams();
-  const currentQuery = searchParams.get("q") || "";
-
   const detailUrl = `/hadits/${item.nama_perawi.toLowerCase()}/${item.nomor_hadits}?q=${encodeURIComponent(currentQuery)}`;
 
   const handleSaveToSession = () => {
@@ -88,3 +87,5 @@ export default function SearchResultItem({
     </Link>
   );
 }
+
+export default memo(SearchResultItem);

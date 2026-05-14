@@ -1,16 +1,18 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
-import LlmSummary from "@/components/LlmSummary";
 import SearchResultItem from "@/components/SearchResultItem";
-import SearchSettingsDialog from "@/components/SearchSettingsDialog";
 import { SearchMode, SearchResponse, SearchMeta } from "@/app/types/search";
 import { formatDuration, normalizeMode, normalizeNarrator, normalizePage, normalizePageSize } from "@/app/lib/search-helpers";
 import { Search, ChevronLeft, ChevronRight, X, History, Loader2 } from "lucide-react";
+
+const LlmSummary = dynamic(() => import("@/components/LlmSummary"));
+const SearchSettingsDialog = dynamic(() => import("@/components/SearchSettingsDialog"));
 
 const exampleQueries = [
   "shalat berjamaah lebih utama",
@@ -469,7 +471,7 @@ function SearchInterface() {
               </motion.p>
 
               <motion.form onSubmit={handleSubmit} className="mt-10 sm:mt-12 w-full max-w-2xl relative" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
-                <div className="flex w-full items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/80 px-6 py-3 sm:py-4 shadow-sm dark:shadow-xl dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
+                <div className="flex w-full items-center gap-2 overflow-hidden rounded-full border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/80 px-4 sm:px-6 py-3 sm:py-4 shadow-sm dark:shadow-xl dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
                   <Search className="h-5 w-5 text-muted-foreground dark:text-slate-500 flex-shrink-0" />
                   <input
                     type="text"
@@ -485,7 +487,7 @@ function SearchInterface() {
                     }}
                     onKeyDown={handleInputKeyDown}
                     placeholder="Cari hadits..."
-                    className="flex-1 border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
+                    className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
                     autoFocus
                   />
                   <AnimatePresence>
@@ -502,8 +504,9 @@ function SearchInterface() {
                       </motion.button>
                     )}
                   </AnimatePresence>
-                  <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-2 flex items-center justify-center rounded-full bg-primary dark:bg-sky-500 px-6 sm:px-8 py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
-                    {loading ? "Mencari..." : "Cari"}
+                  <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-1 sm:ml-2 flex h-10 w-10 sm:h-auto sm:w-auto shrink-0 items-center justify-center rounded-full bg-primary dark:bg-sky-500 p-0 sm:px-8 sm:py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <Search className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">{loading ? "Mencari..." : "Cari"}</span>
                   </motion.button>
                 </div>
 
@@ -552,7 +555,7 @@ function SearchInterface() {
 
                   <div className="w-full max-w-2xl relative">
                     <form onSubmit={handleSubmit} className="w-full">
-                      <div className="flex w-full items-center gap-2 rounded-lg border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/50 px-4 py-2.5 shadow-sm dark:shadow-lg dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
+                      <div className="flex w-full items-center gap-2 overflow-hidden rounded-lg border border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/50 px-4 py-2.5 shadow-sm dark:shadow-lg dark:shadow-black/20 backdrop-blur transition-all focus-within:shadow-md focus-within:border-primary/50 dark:focus-within:border-sky-400/50">
                         <Search className="h-4 w-4 text-muted-foreground dark:text-slate-500 flex-shrink-0" />
                         <input
                           type="text"
@@ -568,7 +571,7 @@ function SearchInterface() {
                           }}
                           onKeyDown={handleInputKeyDown}
                           placeholder="Cari hadits..."
-                          className="flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
+                          className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
                         />
                         <AnimatePresence>
                           {query && (
@@ -584,8 +587,9 @@ function SearchInterface() {
                             </motion.button>
                           )}
                         </AnimatePresence>
-                        <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-2 flex items-center justify-center rounded-lg bg-primary dark:bg-sky-500 px-4 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
-                          {loading ? "..." : "Cari"}
+                        <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-1 sm:ml-2 flex h-8 w-8 sm:h-auto sm:w-auto shrink-0 items-center justify-center rounded-lg bg-primary dark:bg-sky-500 p-0 sm:px-4 sm:py-1.5 text-xs sm:text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
+                          <Search className="h-3.5 w-3.5 sm:hidden" />
+                          <span className="hidden sm:inline">{loading ? "..." : "Cari"}</span>
                         </motion.button>
                       </div>
                     </form>
@@ -644,7 +648,7 @@ function SearchInterface() {
                       )}
                       <motion.div className="space-y-6" initial="hidden" animate="visible" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}>
                         {response.results.map((item, idx) => (
-                          <SearchResultItem key={`${item.nama_perawi}-${item.nomor_hadits}-${idx}`} item={item} index={idx} />
+                          <SearchResultItem key={`${item.nama_perawi}-${item.nomor_hadits}-${idx}`} item={item} index={idx} currentQuery={response.query} />
                         ))}
                       </motion.div>
 
@@ -688,9 +692,5 @@ function SearchInterface() {
 
 // PEMBUNGKUS UTAMA DENGAN SUSPENSE
 export default function Home() {
-  return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>}>
-      <SearchInterface />
-    </Suspense>
-  );
+  return <SearchInterface />;
 }
