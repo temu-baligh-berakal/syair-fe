@@ -11,7 +11,7 @@ export function normalizeMode(value: string | null): SearchMode {
   return "hybrid";
 }
 
-export function normalizeTopK(value: string | null): number {
+export function normalizePageSize(value: string | null): number {
   if (value === null || value.trim() === "") {
     return 10;
   }
@@ -20,4 +20,15 @@ export function normalizeTopK(value: string | null): number {
     return 10;
   }
   return Math.min(50, Math.max(1, parsed));
+}
+
+export function normalizePage(value: string | null): number {
+  if (value === null || value.trim() === "") {
+    return 1;
+  }
+  const parsed = Number(value);
+  if (Number.isNaN(parsed) || parsed < 1) {
+    return 1;
+  }
+  return parsed;
 }

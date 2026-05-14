@@ -9,8 +9,8 @@ import LlmSummary from "@/components/LlmSummary";
 import SearchResultItem from "@/components/SearchResultItem";
 import SearchSettingsDialog from "@/components/SearchSettingsDialog";
 import { SearchMode, SearchResponse, SearchMeta } from "@/app/types/search";
-import { formatDuration, normalizeMode, normalizeTopK } from "@/app/lib/search-helpers";
-import { Search } from "lucide-react"; // Dihapus ArrowLeft karena sudah pakai Logo
+import { formatDuration, normalizeMode, normalizePage, normalizePageSize } from "@/app/lib/search-helpers";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react"; 
 
 const exampleQueries = [
   "shalat berjamaah lebih utama",
@@ -25,13 +25,15 @@ function SearchInterface() {
 
   const urlQuery = searchParams.get("q")?.trim() ?? "";
   const urlMode = normalizeMode(searchParams.get("mode"));
-  const urlTopK = normalizeTopK(searchParams.get("topk"));
+  const urlPage = normalizePage(searchParams.get("page"));
+  const urlPageSize = normalizePageSize(searchParams.get("size"));
 
   const [query, setQuery] = useState(urlQuery);
   const [mode, setMode] = useState<SearchMode>(urlMode);
-  const [topK, setTopK] = useState(urlTopK);
+  const [page, setPage] = useState(urlPage);
+  const [pageSize, setPageSize] = useState(urlPageSize);
   const [draftMode, setDraftMode] = useState<SearchMode>(urlMode);
-  const [draftTopK, setDraftTopK] = useState(urlTopK);
+  const [draftPageSize, setDraftPageSize] = useState(urlPageSize);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,15 +46,16 @@ function SearchInterface() {
 
   // Gunakan SessionStorage key ini untuk mendeteksi hasil yang disimpan
   const urlSearchKey = useMemo(() => {
-    return urlQuery ? `${urlQuery}::${urlMode}::${urlTopK}` : null;
-  }, [urlMode, urlQuery, urlTopK]);
+    return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}` : null;
+  }, [urlMode, urlQuery, urlPage, urlPageSize]);
 
   // EFEK 1: Sinkronisasi Input Form dengan URL
   useEffect(() => {
     setQuery(urlQuery);
     setMode(urlMode);
-    setTopK(urlTopK);
-  }, [urlQuery, urlMode, urlTopK]);
+    setPage(urlPage);
+    setPageSize(urlPageSize);
+  }, [urlQuery, urlMode, urlPage, urlPageSize]);
 
   // EFEK 2: Menjalankan Pencarian atau Memulihkan dari Sesi
   useEffect(() => {
@@ -89,10 +92,10 @@ function SearchInterface() {
     setSummary(null);
 
     lastFetchedKeyRef.current = urlSearchKey;
-    void runSearch(urlQuery, urlMode, urlTopK, urlSearchKey);
-  }, [urlMode, urlQuery, urlSearchKey, urlTopK]);
+    void runSearch(urlQuery, urlMode, urlPage, urlPageSize, urlSearchKey);
+  }, [urlMode, urlQuery, urlSearchKey, urlPage, urlPageSize]);
 
-  async function runSearch(searchQuery: string, searchMode: SearchMode, searchTopK: number, currentKey: string) {
+  async function runSearch(searchQuery: string, searchMode: SearchMode, searchPage: number, searchPageSize: number, currentKey: string) {
     if (searchQuery.trim().length < 3) {
       setError(null);
       setResponse(null);
@@ -110,7 +113,7 @@ function SearchInterface() {
       const result = await fetch("/api/hadits/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery, top_k: searchTopK, mode: searchMode }),
+        body: JSON.stringify({ query: searchQuery, page: searchPage, page_size: searchPageSize, mode: searchMode }),
       });
 
       const data = (await result.json()) as SearchResponse | { detail?: string };
@@ -139,7 +142,7 @@ function SearchInterface() {
     }
   }
 
-  function navigateToSearch(nextQuery: string, nextMode: SearchMode, nextTopK: number) {
+  function navigateToSearch(nextQuery: string, nextMode: SearchMode, nextPage: number, nextPageSize: number) {
     const trimmedQuery = nextQuery.trim();
     if (trimmedQuery.length < 3) {
       setError(null);
@@ -150,14 +153,15 @@ function SearchInterface() {
     const params = new URLSearchParams();
     params.set("q", trimmedQuery);
     params.set("mode", nextMode);
-    params.set("topk", String(nextTopK));
+    params.set("page", String(nextPage));
+    params.set("size", String(nextPageSize));
 
     router.push(`${pathname}?${params.toString()}`);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    navigateToSearch(query, mode, topK);
+    navigateToSearch(query, mode, 1, pageSize);
   }
 
   // FUNGSI UNTUK RESET DAN KEMBALI KE HALAMAN UTAMA (HERO)
@@ -169,21 +173,22 @@ function SearchInterface() {
   }
 
   function saveSettings() {
-    const normalizedTopK = Number.isNaN(draftTopK) ? topK : Math.min(50, Math.max(1, draftTopK));
+    const normalizedPageSize = Number.isNaN(draftPageSize) ? pageSize : Math.min(50, Math.max(1, draftPageSize));
     setMode(draftMode);
-    setTopK(normalizedTopK);
-    setDraftTopK(normalizedTopK);
+    setPageSize(normalizedPageSize);
+    setDraftPageSize(normalizedPageSize);
     setSettingsOpen(false);
     toast.success("Pengaturan berhasil disimpan", {
-      description: `Mode ${draftMode} dengan ${normalizedTopK} item aktif.`,
+      description: `Mode ${draftMode} dengan ${normalizedPageSize} item aktif.`,
       duration: 1000,
     });
+    if (query) navigateToSearch(query, draftMode, 1, normalizedPageSize);
   }
 
   function handleOpenSettings(open: boolean) {
     if (open) {
       setDraftMode(mode);
-      setDraftTopK(topK);
+      setDraftPageSize(pageSize);
     }
     setSettingsOpen(open);
   }
@@ -230,7 +235,7 @@ function SearchInterface() {
 
               <motion.div className="mt-8 flex flex-wrap justify-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
                 {exampleQueries.map((example, idx) => (
-                  <motion.button key={example} type="button" onClick={() => navigateToSearch(example, mode, topK)} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 + idx * 0.08 }} className="rounded-full bg-muted dark:bg-zinc-800/50 border border-border/40 dark:border-white/10 px-4 py-2 text-xs sm:text-sm text-foreground dark:text-slate-300 transition-all hover:bg-muted/80 dark:hover:bg-zinc-700/50 hover:border-primary/20 dark:hover:border-sky-400/30">
+                  <motion.button key={example} type="button" onClick={() => navigateToSearch(example, mode, 1, pageSize)} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 + idx * 0.08 }} className="rounded-full bg-muted dark:bg-zinc-800/50 border border-border/40 dark:border-white/10 px-4 py-2 text-xs sm:text-sm text-foreground dark:text-slate-300 transition-all hover:bg-muted/80 dark:hover:bg-zinc-700/50 hover:border-primary/20 dark:hover:border-sky-400/30">
                     {example}
                   </motion.button>
                 ))}
@@ -322,6 +327,27 @@ function SearchInterface() {
                           <SearchResultItem key={`${item.nama_perawi}-${item.nomor_hadits}-${idx}`} item={item} index={idx} />
                         ))}
                       </motion.div>
+
+                      {/* PAGINATION UI */}
+                      {response.total > pageSize && (
+                        <div className="mt-10 flex items-center justify-center gap-4">
+                          <button
+                            onClick={() => navigateToSearch(query, mode, Math.max(1, page - 1), pageSize)}
+                            disabled={page === 1}
+                            className="flex items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="h-4 w-4" /> Sebelumnya
+                          </button>
+                          <span className="text-sm font-medium text-muted-foreground">Halaman {page} dari {Math.ceil(response.total / pageSize)}</span>
+                          <button
+                            onClick={() => navigateToSearch(query, mode, page + 1, pageSize)}
+                            disabled={page * pageSize >= response.total}
+                            className="flex items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Selanjutnya <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   ) : loading ? (
                     <motion.p className="text-sm text-muted-foreground dark:text-slate-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -335,7 +361,7 @@ function SearchInterface() {
         </AnimatePresence>
       </main>
 
-      <SearchSettingsDialog open={settingsOpen} onOpenChange={handleOpenSettings} draftMode={draftMode} setDraftMode={setDraftMode} draftTopK={draftTopK} setDraftTopK={setDraftTopK} onSave={saveSettings} onCancel={() => handleOpenSettings(false)} />
+      <SearchSettingsDialog open={settingsOpen} onOpenChange={handleOpenSettings} draftMode={draftMode} setDraftMode={setDraftMode} draftPageSize={draftPageSize} setDraftPageSize={setDraftPageSize} onSave={saveSettings} onCancel={() => handleOpenSettings(false)} />
     </>
   );
 }

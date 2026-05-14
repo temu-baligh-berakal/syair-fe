@@ -26,8 +26,8 @@ interface SearchSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   draftMode: SearchMode;
   setDraftMode: (mode: SearchMode) => void;
-  draftTopK: number;
-  setDraftTopK: (topK: number) => void;
+  draftPageSize: number;
+  setDraftPageSize: (pageSize: number) => void;
   onSave: () => void;
   onCancel: () => void;
 }
@@ -39,8 +39,8 @@ export default function SearchSettingsDialog({
   onOpenChange,
   draftMode,
   setDraftMode,
-  draftTopK,
-  setDraftTopK,
+  draftPageSize,
+  setDraftPageSize,
   onSave,
   onCancel,
 }: SearchSettingsDialogProps) {
@@ -166,7 +166,7 @@ export default function SearchSettingsDialog({
                 htmlFor="top-k"
                 className="mb-3 block text-sm font-semibold text-foreground dark:text-white"
               >
-                Jumlah Hasil
+                Hasil per Halaman
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -174,21 +174,21 @@ export default function SearchSettingsDialog({
                   type="range"
                   min={1}
                   max={50}
-                  value={draftTopK}
-                  onChange={(event) => setDraftTopK(Number(event.target.value))}
+                  value={draftPageSize}
+                  onChange={(event) => setDraftPageSize(Number(event.target.value))}
                   className="flex-1 h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-gray-400 dark:accent-gray-500"
                 />
                 <motion.div
-                  key={draftTopK}
+                  key={draftPageSize}
                   initial={{ scale: 1.2, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className="min-w-12 rounded-lg bg-primary/10 dark:bg-sky-500/10 px-3 py-2 text-center text-sm font-semibold text-primary dark:text-sky-400"
                 >
-                  {draftTopK}
+                  {draftPageSize}
                 </motion.div>
               </div>
               <p className="mt-3 text-xs text-muted-foreground dark:text-slate-500">
-                Backend mendukung 1 sampai 50 hasil.
+                Menampilkan 1 sampai 50 hasil per halaman.
               </p>
             </div>
           </motion.div>

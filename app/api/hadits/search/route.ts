@@ -5,7 +5,8 @@ const backendBaseUrl =
 
 type SearchPayload = {
   query?: string;
-  top_k?: number;
+  page?: number;
+  page_size?: number;
   nama_perawi?: string | null;
   mode?: string;
 };
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
 
   const trimmedQuery = payload.query?.trim();
   const trimmedNarrator = payload.nama_perawi?.trim();
-  const topK = payload.top_k ?? 10;
+  const page = payload.page ?? 1;
+  const pageSize = payload.page_size ?? 10;
   const mode = payload.mode ?? "knn";
 
   if (!trimmedQuery || trimmedQuery.length < 3) {
@@ -46,7 +48,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         query: trimmedQuery,
-        top_k: topK,
+        page: page,
+        page_size: pageSize,
         nama_perawi: trimmedNarrator || undefined,
         mode,
       }),
