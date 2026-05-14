@@ -5,29 +5,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { Sparkles } from "lucide-react";
 
-type SearchResult = {
-  nama_perawi: string;
-  nomor_hadits: number;
-  referensi_lengkap: string;
-  arab: string;
-  terjemahan: string;
-  score: number;
-};
-
 interface LlmSummaryProps {
   query: string;
   results: any[];
   isSearchLoading: boolean;
-  cachedSummary?: string | null; // Tambahkan prop ini
-  onSummaryGenerated?: (summary: string) => void; // Tambahkan prop ini
+  cachedSummary?: string | null;
+  onSummaryGenerated?: (summary: string) => void;
 }
 
-export default function LlmSummary({ 
-  query, 
-  results, 
-  isSearchLoading, 
-  cachedSummary, 
-  onSummaryGenerated 
+export default function LlmSummary({
+  query,
+  results,
+  isSearchLoading,
+  cachedSummary,
+  onSummaryGenerated,
 }: LlmSummaryProps) {
   const [summary, setSummary] = useState<string | null>(cachedSummary || null);
   const [loading, setLoading] = useState(false);
@@ -43,51 +34,77 @@ export default function LlmSummary({
       setSummary(null);
       setDisplayedText("");
       setIsExpanded(false);
+      setError(null);
       return;
     }
 
-    // 2. Jika tidak ada hasil, jangan lakukan apa-apa
     if (results.length === 0) return;
 
-    // 3. Jika parent mengirimkan cachedSummary, langsung gunakan tanpa fetch
     if (cachedSummary) {
       setSummary(cachedSummary);
       return;
     }
 
+    // Jangan fetch ulang kalau summary sudah ada (misal dari state sebelumnya)
+    if (summary) return;
+
     async function fetchSummary() {
       setLoading(true);
+      setError(null);
       try {
         const res = await fetch("/api/llm/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query, hadits_results: results }),
         });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error: ${res.status}`);
+        }
+
         const data = await res.json();
-        
-        let cleanText = data.summary;
-        
-        if (typeof cleanText === 'string') {
-          if (cleanText.startsWith('"') && cleanText.endsWith('"')) {
-            cleanText = cleanText.slice(1, -1);
-          }
-          
-          cleanText = cleanText.replace(/\\n/g, '\n');
-          
-          cleanText = cleanText.replace(/\\"/g, '"');
+
+        // --- FIX: Defensive extraction ---
+        // Handle berbagai format response: { summary: "..." } atau string langsung
+        const extractText = (): string => {
+          if (typeof data === "string") return data;
+          if (typeof data?.summary === "string") return data.summary;
+          if (typeof data?.result === "string") return data.result;
+          if (typeof data?.text === "string") return data.text;
+          console.error("[LlmSummary] Unexpected response format:", JSON.stringify(data));
+          throw new Error("Format respons tidak dikenali dari server.");
+        };
+
+        // Bersihkan escape characters
+        let cleanText = extractText();
+        if (cleanText.startsWith('"') && cleanText.endsWith('"')) {
+          cleanText = cleanText.slice(1, -1);
+        }
+        cleanText = cleanText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+
+        if (!cleanText.trim()) {
+          throw new Error("Ringkasan kosong diterima dari server.");
         }
 
         setSummary(cleanText);
         onSummaryGenerated?.(cleanText);
       } catch (err) {
-        console.error("Gagal rangkum:", err);
+        console.error("[LlmSummary] Gagal rangkum:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Gagal memuat ringkasan. Silakan coba lagi."
+        );
       } finally {
         setLoading(false);
       }
     }
 
     fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSearchLoading, results, cachedSummary, query]);
+  // Sengaja exclude `summary` dari deps agar tidak infinite loop,
+  // tapi kita guard dengan `if (summary) return` di atas.
 
   useEffect(() => {
     if (summary && !loading) {
@@ -105,11 +122,17 @@ export default function LlmSummary({
           setIsTyping(false);
         }
       }, speed);
+
+      return () => {
+        if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+      };
     }
   }, [summary, loading]);
 
-  if (!isSearchLoading && !loading && !summary && !error && !isTyping)
+  // Hanya hide jika benar-benar tidak ada state apapun yang aktif
+  if (!isSearchLoading && !loading && !summary && !error && !isTyping) {
     return null;
+  }
 
   const showShimmer = isSearchLoading || loading;
 
@@ -199,7 +222,10 @@ export default function LlmSummary({
                         />
                       ),
                       strong: ({ node, ...props }) => (
-                        <strong className="font-semibold text-foreground dark:text-white" {...props} />
+                        <strong
+                          className="font-semibold text-foreground dark:text-white"
+                          {...props}
+                        />
                       ),
                       ul: ({ node, ...props }) => (
                         <ul className="mb-3 ml-5 list-disc space-y-1" {...props} />
@@ -207,7 +233,9 @@ export default function LlmSummary({
                       ol: ({ node, ...props }) => (
                         <ol className="mb-3 ml-5 list-decimal space-y-1" {...props} />
                       ),
-                      li: ({ node, ...props }) => <li className="mb-0" {...props} />,
+                      li: ({ node, ...props }) => (
+                        <li className="mb-0" {...props} />
+                      ),
                     }}
                   >
                     {displayedText}

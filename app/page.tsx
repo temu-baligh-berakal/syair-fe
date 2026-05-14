@@ -123,11 +123,12 @@ function SearchInterface() {
       setResponse(data as SearchResponse);
       setSearchMeta(meta);
 
-      // SIMPAN KE SESSION STORAGE
+      // SIMPAN KE SESSION STORAGE (tanpa summary dulu, akan di-update oleh onSummaryGenerated)
       sessionStorage.setItem("lastSearchState", JSON.stringify({
         key: currentKey,
         response: data,
-        meta: meta
+        meta: meta,
+        summary: null,
       }));
 
     } catch (submitError) {
@@ -300,12 +301,21 @@ function SearchInterface() {
                       cachedSummary={summary}
                       onSummaryGenerated={(generated) => {
                         setSummary(generated);
-                        // Update session storage dengan summary yang baru jadi
-                        const currentState = JSON.parse(sessionStorage.getItem("lastSearchState") || "{}");
-                        sessionStorage.setItem("lastSearchState", JSON.stringify({
-                          ...currentState,
-                          summary: generated
-                        }));
+                        // Update session storage dengan summary — pastikan key masih sama
+                        try {
+                          const raw = sessionStorage.getItem("lastSearchState");
+                          if (raw) {
+                            const currentState = JSON.parse(raw);
+                            if (currentState.key === urlSearchKey) {
+                              sessionStorage.setItem("lastSearchState", JSON.stringify({
+                                ...currentState,
+                                summary: generated,
+                              }));
+                            }
+                          }
+                        } catch (e) {
+                          console.error("Gagal menyimpan summary ke session storage", e);
+                        }
                       }}
                     />
                   </div>
@@ -340,7 +350,6 @@ function SearchInterface() {
   );
 }
 
-// PEMBUNGKUS UTAMA DENGAN SUSPENSE
 export default function Home() {
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>}>
