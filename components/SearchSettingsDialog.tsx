@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Settings, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -26,11 +26,26 @@ interface SearchSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   draftMode: SearchMode;
   setDraftMode: (mode: SearchMode) => void;
+  draftNarrator: string;
+  setDraftNarrator: (narrator: string) => void;
   draftPageSize: number;
   setDraftPageSize: (pageSize: number) => void;
   onSave: () => void;
   onCancel: () => void;
 }
+
+const narratorOptions = [
+  "",
+  "Bukhari",
+  "Muslim",
+  "Tirmidzi",
+  "Abu Daud",
+  "Nasai",
+  "Ibnu Majah",
+  "Ahmad",
+  "Malik",
+  "Darimi",
+];
 
 type Theme = "light" | "dark" | "system";
 
@@ -39,6 +54,8 @@ export default function SearchSettingsDialog({
   onOpenChange,
   draftMode,
   setDraftMode,
+  draftNarrator,
+  setDraftNarrator,
   draftPageSize,
   setDraftPageSize,
   onSave,
@@ -49,17 +66,17 @@ export default function SearchSettingsDialog({
   // State draft khusus untuk tema
   const [draftTheme, setDraftTheme] = useState<Theme>(theme);
 
-  // Sync draftTheme dengan actual theme saat dialog dibuka
-  useEffect(() => {
-    if (open) {
-      setDraftTheme(theme);
-    }
-  }, [open, theme]);
-
   // Handle logika tombol "Simpan"
   const handleSave = () => {
     setTheme(draftTheme); // Set tema sesungguhnya di sini
     onSave();             // Lanjutkan proses save parameter pencarian
+  };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setDraftTheme(theme);
+    }
+    onOpenChange(nextOpen);
   };
 
   return (
@@ -75,7 +92,7 @@ export default function SearchSettingsDialog({
         <Settings className="h-5 w-5" />
       </motion.button>
 
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900/95 backdrop-blur">
           <DialogHeader>
             <DialogTitle className="text-foreground dark:text-white">
@@ -157,6 +174,27 @@ export default function SearchSettingsDialog({
               </Select>
               <p className="mt-2 text-xs text-muted-foreground dark:text-slate-500">
                 Pilih strategi pencarian yang paling sesuai untuk kebutuhan Anda.
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-3 block text-sm font-semibold text-foreground dark:text-white">
+                Filter Perawi
+              </label>
+              <Select value={draftNarrator || "__all__"} onValueChange={(value) => setDraftNarrator(value === "__all__" ? "" : value)}>
+                <SelectTrigger className="rounded-lg border-border/40 dark:border-white/10 bg-muted dark:bg-zinc-800 text-foreground dark:text-white hover:border-primary/40 dark:hover:border-sky-400/40 focus:ring-primary/50 dark:focus:ring-sky-400/50">
+                  <SelectValue placeholder="Semua perawi" />
+                </SelectTrigger>
+                <SelectContent className="border-border/40 dark:border-white/10 bg-card dark:bg-zinc-900 backdrop-blur">
+                  {narratorOptions.map((option) => (
+                    <SelectItem key={option || "__all__"} value={option || "__all__"} className="dark:focus:bg-zinc-800">
+                      {option || "Semua perawi"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-2 text-xs text-muted-foreground dark:text-slate-500">
+                Batasi hasil pencarian ke kitab/perawi tertentu bila diperlukan.
               </p>
             </div>
 

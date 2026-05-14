@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -9,14 +9,28 @@ import LlmSummary from "@/components/LlmSummary";
 import SearchResultItem from "@/components/SearchResultItem";
 import SearchSettingsDialog from "@/components/SearchSettingsDialog";
 import { SearchMode, SearchResponse, SearchMeta } from "@/app/types/search";
-import { formatDuration, normalizeMode, normalizePage, normalizePageSize } from "@/app/lib/search-helpers";
-import { Search, ChevronLeft, ChevronRight, X } from "lucide-react"; 
+import { formatDuration, normalizeMode, normalizeNarrator, normalizePage, normalizePageSize } from "@/app/lib/search-helpers";
+import { Search, ChevronLeft, ChevronRight, X, History, Loader2 } from "lucide-react";
 
 const exampleQueries = [
   "shalat berjamaah lebih utama",
   "larangan marah",
   "keutamaan menuntut ilmu",
 ];
+
+const RECENT_SEARCHES_STORAGE_KEY = "recentSearches";
+
+type RecentSearchEntry = {
+  query: string;
+  narrator: string;
+};
+
+type DropdownItem = {
+  key: string;
+  label: string;
+  narrator: string;
+  type: "suggestion" | "recent";
+};
 
 function SearchInterface() {
   const router = useRouter();
@@ -27,13 +41,16 @@ function SearchInterface() {
   const urlMode = normalizeMode(searchParams.get("mode"));
   const urlPage = normalizePage(searchParams.get("page"));
   const urlPageSize = normalizePageSize(searchParams.get("size"));
+  const urlNarrator = normalizeNarrator(searchParams.get("perawi"));
 
   const [query, setQuery] = useState(urlQuery);
   const [mode, setMode] = useState<SearchMode>(urlMode);
   const [page, setPage] = useState(urlPage);
   const [pageSize, setPageSize] = useState(urlPageSize);
+  const [narrator, setNarrator] = useState(urlNarrator);
   const [draftMode, setDraftMode] = useState<SearchMode>(urlMode);
   const [draftPageSize, setDraftPageSize] = useState(urlPageSize);
+  const [draftNarrator, setDraftNarrator] = useState(urlNarrator);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,14 +62,39 @@ function SearchInterface() {
   // AUTOCOMPLETE STATE
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<RecentSearchEntry[]>([]);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   const lastFetchedKeyRef = useRef<string | null>(null);
 
+  const dropdownItems = useMemo<DropdownItem[]>(() => {
+    if (query.trim().length >= 2) {
+      return suggestions.map((suggestion) => ({
+        key: `suggestion-${suggestion}`,
+        label: suggestion,
+        narrator,
+        type: "suggestion",
+      }));
+    }
+
+    return recentSearches.slice(0, 5).map((item) => ({
+      key: `recent-${item.query}-${item.narrator || "all"}`,
+      label: item.query,
+      narrator: item.narrator,
+      type: "recent",
+    }));
+  }, [narrator, query, recentSearches, suggestions]);
+
+  const shouldShowSuggestionDropdown =
+    showSuggestions &&
+    (dropdownItems.length > 0 || (query.trim().length >= 2 && suggestionLoading));
+
   // Gunakan SessionStorage key ini untuk mendeteksi hasil yang disimpan
   const urlSearchKey = useMemo(() => {
-    return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}` : null;
-  }, [urlMode, urlQuery, urlPage, urlPageSize]);
+    return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}::${urlNarrator}` : null;
+  }, [urlMode, urlNarrator, urlQuery, urlPage, urlPageSize]);
 
   // EFEK 1: Sinkronisasi Input Form dengan URL
   useEffect(() => {
@@ -60,7 +102,24 @@ function SearchInterface() {
     setMode(urlMode);
     setPage(urlPage);
     setPageSize(urlPageSize);
-  }, [urlQuery, urlMode, urlPage, urlPageSize]);
+    setNarrator(urlNarrator);
+  }, [urlMode, urlNarrator, urlPage, urlPageSize, urlQuery]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored) as RecentSearchEntry[];
+      if (Array.isArray(parsed)) {
+        setRecentSearches(
+          parsed.filter((item) => typeof item?.query === "string" && typeof item?.narrator === "string"),
+        );
+      }
+    } catch {
+      console.error("Gagal membaca recent searches");
+    }
+  }, []);
 
   // EFEK 2: Menjalankan Pencarian atau Memulihkan dari Sesi
   useEffect(() => {
@@ -97,31 +156,44 @@ function SearchInterface() {
     setSummary(null);
 
     lastFetchedKeyRef.current = urlSearchKey;
-    void runSearch(urlQuery, urlMode, urlPage, urlPageSize, urlSearchKey);
-  }, [urlMode, urlQuery, urlSearchKey, urlPage, urlPageSize]);
+    void runSearch(urlQuery, urlMode, urlPage, urlPageSize, urlNarrator, urlSearchKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlMode, urlNarrator, urlQuery, urlSearchKey, urlPage, urlPageSize]);
 
   // EFEK 3: FETCH SUGGESTIONS (AUTOCOMPLETE)
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (query.trim().length < 2) {
         setSuggestions([]);
+        setSuggestionLoading(false);
         return;
       }
 
+      setSuggestionLoading(true);
       try {
         const res = await fetch(`/api/hadits/suggest?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         if (data.suggestions) {
-          setSuggestions(data.suggestions);
+          setSuggestions([...new Set((data.suggestions as string[]).filter(Boolean))].slice(0, 6));
         }
       } catch (err) {
         console.error("Gagal fetch suggestions", err);
+        setSuggestions([]);
+      } finally {
+        setSuggestionLoading(false);
       }
     };
 
+    setActiveSuggestionIndex(-1);
     const timer = setTimeout(fetchSuggestions, 300); // Debounce 300ms
     return () => clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    if (activeSuggestionIndex >= dropdownItems.length) {
+      setActiveSuggestionIndex(-1);
+    }
+  }, [activeSuggestionIndex, dropdownItems.length]);
 
   // CLOSE SUGGESTIONS WHEN CLICK OUTSIDE
   useEffect(() => {
@@ -134,7 +206,33 @@ function SearchInterface() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function runSearch(searchQuery: string, searchMode: SearchMode, searchPage: number, searchPageSize: number, currentKey: string) {
+  function saveRecentSearch(searchQuery: string, searchNarrator: string) {
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length < 3) return;
+
+    setRecentSearches((current) => {
+      const nextEntries = [
+        { query: trimmedQuery, narrator: searchNarrator.trim() },
+        ...current.filter(
+          (item) =>
+            item.query.toLowerCase() !== trimmedQuery.toLowerCase() ||
+            item.narrator.toLowerCase() !== searchNarrator.trim().toLowerCase(),
+        ),
+      ].slice(0, 6);
+
+      localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(nextEntries));
+      return nextEntries;
+    });
+  }
+
+  async function runSearch(
+    searchQuery: string,
+    searchMode: SearchMode,
+    searchPage: number,
+    searchPageSize: number,
+    searchNarrator: string,
+    currentKey: string,
+  ) {
     if (searchQuery.trim().length < 3) {
       setError(null);
       setResponse(null);
@@ -152,7 +250,13 @@ function SearchInterface() {
       const result = await fetch("/api/hadits/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery, page: searchPage, page_size: searchPageSize, mode: searchMode }),
+        body: JSON.stringify({
+          query: searchQuery,
+          page: searchPage,
+          page_size: searchPageSize,
+          mode: searchMode,
+          nama_perawi: searchNarrator || undefined,
+        }),
       });
 
       const data = (await result.json()) as SearchResponse | { detail?: string };
@@ -164,6 +268,7 @@ function SearchInterface() {
       const meta = { durationMs: performance.now() - startedAt };
       setResponse(data as SearchResponse);
       setSearchMeta(meta);
+      saveRecentSearch(searchQuery, searchNarrator);
 
       // SIMPAN KE SESSION STORAGE
       sessionStorage.setItem("lastSearchState", JSON.stringify({
@@ -181,7 +286,13 @@ function SearchInterface() {
     }
   }
 
-  function navigateToSearch(nextQuery: string, nextMode: SearchMode, nextPage: number, nextPageSize: number) {
+  function navigateToSearch(
+    nextQuery: string,
+    nextMode: SearchMode,
+    nextPage: number,
+    nextPageSize: number,
+    nextNarrator: string,
+  ) {
     const trimmedQuery = nextQuery.trim();
     if (trimmedQuery.length < 3) {
       setError(null);
@@ -194,14 +305,56 @@ function SearchInterface() {
     params.set("mode", nextMode);
     params.set("page", String(nextPage));
     params.set("size", String(nextPageSize));
+    if (nextNarrator.trim()) {
+      params.set("perawi", nextNarrator.trim());
+    }
 
     router.push(`${pathname}?${params.toString()}`);
     setShowSuggestions(false);
+    setActiveSuggestionIndex(-1);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    navigateToSearch(query, mode, 1, pageSize);
+    navigateToSearch(query, mode, 1, pageSize, narrator);
+  }
+
+  function handleSelectDropdownItem(item: DropdownItem) {
+    setQuery(item.label);
+    setShowSuggestions(false);
+    navigateToSearch(item.label, mode, 1, pageSize, item.narrator);
+  }
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!shouldShowSuggestionDropdown || dropdownItems.length === 0) {
+      if (event.key === "Escape") {
+        setShowSuggestions(false);
+      }
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestionIndex((prev) => (prev + 1) % dropdownItems.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestionIndex((prev) => (prev <= 0 ? dropdownItems.length - 1 : prev - 1));
+      return;
+    }
+
+    if (event.key === "Enter" && activeSuggestionIndex >= 0) {
+      event.preventDefault();
+      handleSelectDropdownItem(dropdownItems[activeSuggestionIndex]);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+    }
   }
 
   // FUNGSI UNTUK RESET DAN KEMBALI KE HALAMAN UTAMA (HERO)
@@ -209,31 +362,90 @@ function SearchInterface() {
     sessionStorage.removeItem("lastSearchState");
     setSummary(null); // Reset summary
     setQuery("");
+    setNarrator("");
+    setDraftNarrator("");
     router.push(pathname);
   }
 
   function saveSettings() {
     const normalizedPageSize = Number.isNaN(draftPageSize) ? pageSize : Math.min(50, Math.max(1, draftPageSize));
     setMode(draftMode);
+    setNarrator(draftNarrator);
     setPageSize(normalizedPageSize);
     setDraftPageSize(normalizedPageSize);
     setSettingsOpen(false);
     toast.success("Pengaturan berhasil disimpan", {
-      description: `Mode ${draftMode} dengan ${normalizedPageSize} item aktif.`,
+      description: `${draftNarrator ? `Perawi ${draftNarrator}, ` : ""}mode ${draftMode} dengan ${normalizedPageSize} item aktif.`,
       duration: 1000,
     });
-    if (query) navigateToSearch(query, draftMode, 1, normalizedPageSize);
+    if (query) navigateToSearch(query, draftMode, 1, normalizedPageSize, draftNarrator);
   }
 
   function handleOpenSettings(open: boolean) {
     if (open) {
       setDraftMode(mode);
       setDraftPageSize(pageSize);
+      setDraftNarrator(narrator);
     }
     setSettingsOpen(open);
   }
 
   const showResults = urlQuery.length >= 3;
+  const activeNarratorLabel = narrator ? `Perawi: ${narrator}` : "Semua perawi";
+
+  function renderSuggestionDropdown(compact: boolean) {
+    if (!shouldShowSuggestionDropdown) return null;
+
+    return (
+      <motion.div
+        ref={suggestionRef}
+        initial={{ opacity: 0, y: compact ? -5 : -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: compact ? -5 : -10 }}
+        className={`absolute top-full left-0 right-0 z-50 ${compact ? "mt-1 rounded-xl p-1.5" : "mt-2 rounded-2xl p-2"} overflow-hidden border border-border/40 bg-card/95 shadow-2xl backdrop-blur-xl dark:bg-zinc-900/95`}
+      >
+        {query.trim().length < 2 && recentSearches.length > 0 && (
+          <div className={`px-3 ${compact ? "pb-1 pt-1" : "pb-2 pt-1"} text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground dark:text-slate-500`}>
+            Recent Searches
+          </div>
+        )}
+        {suggestionLoading && query.trim().length >= 2 ? (
+          <div className={`flex items-center gap-2 px-4 ${compact ? "py-3 text-sm" : "py-4 text-sm"} text-muted-foreground dark:text-slate-400`}>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Memuat suggestion...</span>
+          </div>
+        ) : (
+          dropdownItems.map((item, index) => (
+            <button
+              key={item.key}
+              type="button"
+              onMouseEnter={() => setActiveSuggestionIndex(index)}
+              onClick={() => handleSelectDropdownItem(item)}
+              className={`flex w-full items-center gap-3 rounded-xl px-4 ${compact ? "py-2.5 text-sm" : "py-3 text-sm"} text-left transition-colors ${
+                activeSuggestionIndex === index
+                  ? "bg-muted dark:bg-zinc-800"
+                  : "hover:bg-muted dark:hover:bg-zinc-800"
+              }`}
+            >
+              {item.type === "recent" ? (
+                <History className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} text-muted-foreground`} />
+              ) : (
+                <Search className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} text-muted-foreground`} />
+              )}
+              <div className="min-w-0">
+                <div className="truncate">{item.label}</div>
+                {item.type === "recent" && item.narrator && (
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground dark:text-slate-500">
+                    {item.narrator}
+                  </div>
+                )}
+              </div>
+            </button>
+          ))
+        )}
+      </motion.div>
+    );
+  }
 
   return (
     <>
@@ -265,8 +477,13 @@ function SearchInterface() {
                     onChange={(e) => {
                       setQuery(e.target.value);
                       setShowSuggestions(true);
+                      setActiveSuggestionIndex(-1);
                     }}
-                    onFocus={() => setShowSuggestions(true)}
+                    onFocus={() => {
+                      setShowSuggestions(true);
+                      setActiveSuggestionIndex(-1);
+                    }}
+                    onKeyDown={handleInputKeyDown}
                     placeholder="Cari hadits..."
                     className="flex-1 border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
                     autoFocus
@@ -291,38 +508,18 @@ function SearchInterface() {
                 </div>
 
                 {/* SUGGESTION DROPDOWN - HERO */}
-                <AnimatePresence>
-                  {showSuggestions && suggestions.length > 0 && (
-                    <motion.div
-                      ref={suggestionRef}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-border/40 bg-card/95 p-2 shadow-2xl backdrop-blur-xl dark:bg-zinc-900/95"
-                    >
-                      {suggestions.map((s, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => {
-                            setQuery(s);
-                            setShowSuggestions(false);
-                            navigateToSearch(s, mode, 1, pageSize);
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors hover:bg-muted dark:hover:bg-zinc-800"
-                        >
-                          <Search className="h-4 w-4 text-muted-foreground" />
-                          <span className="truncate">{s}</span>
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <AnimatePresence>{renderSuggestionDropdown(false)}</AnimatePresence>
               </motion.form>
+
+              <motion.div className="mt-4 flex flex-wrap justify-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
+                <span className="rounded-full border border-border/40 bg-card px-3 py-1 text-xs font-medium text-muted-foreground dark:border-white/10 dark:bg-zinc-900/60 dark:text-slate-400">
+                  {activeNarratorLabel}
+                </span>
+              </motion.div>
 
               <motion.div className="mt-8 flex flex-wrap justify-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
                 {exampleQueries.map((example, idx) => (
-                  <motion.button key={example} type="button" onClick={() => navigateToSearch(example, mode, 1, pageSize)} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 + idx * 0.08 }} className="rounded-full bg-muted dark:bg-zinc-800/50 border border-border/40 dark:border-white/10 px-4 py-2 text-xs sm:text-sm text-foreground dark:text-slate-300 transition-all hover:bg-muted/80 dark:hover:bg-zinc-700/50 hover:border-primary/20 dark:hover:border-sky-400/30">
+                  <motion.button key={example} type="button" onClick={() => navigateToSearch(example, mode, 1, pageSize, narrator)} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 + idx * 0.08 }} className="rounded-full bg-muted dark:bg-zinc-800/50 border border-border/40 dark:border-white/10 px-4 py-2 text-xs sm:text-sm text-foreground dark:text-slate-300 transition-all hover:bg-muted/80 dark:hover:bg-zinc-700/50 hover:border-primary/20 dark:hover:border-sky-400/30">
                     {example}
                   </motion.button>
                 ))}
@@ -363,8 +560,13 @@ function SearchInterface() {
                           onChange={(e) => {
                             setQuery(e.target.value);
                             setShowSuggestions(true);
+                            setActiveSuggestionIndex(-1);
                           }}
-                          onFocus={() => setShowSuggestions(true)}
+                          onFocus={() => {
+                            setShowSuggestions(true);
+                            setActiveSuggestionIndex(-1);
+                          }}
+                          onKeyDown={handleInputKeyDown}
                           placeholder="Cari hadits..."
                           className="flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
                         />
@@ -389,33 +591,7 @@ function SearchInterface() {
                     </form>
 
                     {/* SUGGESTION DROPDOWN - RESULTS PAGE */}
-                    <AnimatePresence>
-                      {showSuggestions && suggestions.length > 0 && (
-                        <motion.div
-                          ref={suggestionRef}
-                          initial={{ opacity: 0, y: -5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -5 }}
-                          className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-xl border border-border/40 bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl dark:bg-zinc-900/95"
-                        >
-                          {suggestions.map((s, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => {
-                                setQuery(s);
-                                setShowSuggestions(false);
-                                navigateToSearch(s, mode, 1, pageSize);
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted dark:hover:bg-zinc-800"
-                            >
-                              <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="truncate">{s}</span>
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <AnimatePresence>{renderSuggestionDropdown(true)}</AnimatePresence>
                   </div>
                 </div>
               </motion.div>
@@ -456,9 +632,14 @@ function SearchInterface() {
                       <motion.p className="mb-6 text-sm text-muted-foreground dark:text-slate-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
                         Sekitar <span className="font-semibold text-foreground dark:text-white">{response.total}</span> hasil ({searchMeta ? formatDuration(searchMeta.durationMs) : "0,00"} detik) untuk <span className="font-semibold text-foreground dark:text-white">&ldquo;{response.query}&rdquo;</span>
                       </motion.p>
+                      <motion.div className="mb-6 flex flex-wrap items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
+                        <span className="rounded-full border border-border/40 bg-card px-3 py-1 text-xs font-medium text-muted-foreground dark:border-white/10 dark:bg-zinc-900/60 dark:text-slate-400">
+                          {activeNarratorLabel}
+                        </span>
+                      </motion.div>
                       {response.suggestion && response.suggestion.toLowerCase() !== response.query.toLowerCase() && (
                         <motion.p className="mb-6 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-                          Mungkin maksud Anda: <button type="button" onClick={() => navigateToSearch(response.suggestion!, mode, 1, pageSize)} className="italic text-primary dark:text-sky-400 font-medium hover:underline focus:outline-none">{response.suggestion}</button>
+                          Mungkin maksud Anda: <button type="button" onClick={() => navigateToSearch(response.suggestion!, mode, 1, pageSize, narrator)} className="italic text-primary dark:text-sky-400 font-medium hover:underline focus:outline-none">{response.suggestion}</button>
                         </motion.p>
                       )}
                       <motion.div className="space-y-6" initial="hidden" animate="visible" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}>
@@ -471,7 +652,7 @@ function SearchInterface() {
                       {response.total > pageSize && (
                         <div className="mt-10 flex items-center justify-center gap-4">
                           <button
-                            onClick={() => navigateToSearch(query, mode, Math.max(1, page - 1), pageSize)}
+                            onClick={() => navigateToSearch(query, mode, Math.max(1, page - 1), pageSize, narrator)}
                             disabled={page === 1}
                             className="flex items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -479,7 +660,7 @@ function SearchInterface() {
                           </button>
                           <span className="text-sm font-medium text-muted-foreground">Halaman {page} dari {Math.ceil(response.total / pageSize)}</span>
                           <button
-                            onClick={() => navigateToSearch(query, mode, page + 1, pageSize)}
+                            onClick={() => navigateToSearch(query, mode, page + 1, pageSize, narrator)}
                             disabled={page * pageSize >= response.total}
                             className="flex items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -500,7 +681,7 @@ function SearchInterface() {
         </AnimatePresence>
       </main>
 
-      <SearchSettingsDialog open={settingsOpen} onOpenChange={handleOpenSettings} draftMode={draftMode} setDraftMode={setDraftMode} draftPageSize={draftPageSize} setDraftPageSize={setDraftPageSize} onSave={saveSettings} onCancel={() => handleOpenSettings(false)} />
+      <SearchSettingsDialog open={settingsOpen} onOpenChange={handleOpenSettings} draftMode={draftMode} setDraftMode={setDraftMode} draftNarrator={draftNarrator} setDraftNarrator={setDraftNarrator} draftPageSize={draftPageSize} setDraftPageSize={setDraftPageSize} onSave={saveSettings} onCancel={() => handleOpenSettings(false)} />
     </>
   );
 }

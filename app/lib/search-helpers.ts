@@ -32,3 +32,7 @@ export function normalizePage(value: string | null): number {
   }
   return parsed;
 }
+
+export function normalizeNarrator(value: string | null): string {
+  return value?.trim() ?? "";
+}
