@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedQuery = payload.query?.trim();
-    const haditsResults = (payload.hadits_results ?? []).slice(0, 3);
+    const haditsResults = (payload.hadits_results ?? []).slice(0, 10);
 
     // Validasi
     if (!trimmedQuery || trimmedQuery.length < 3) {
