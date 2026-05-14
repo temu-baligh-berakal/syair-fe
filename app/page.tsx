@@ -322,6 +322,11 @@ function SearchInterface() {
                       <motion.p className="mb-6 text-sm text-muted-foreground dark:text-slate-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
                         Sekitar <span className="font-semibold text-foreground dark:text-white">{response.total}</span> hasil ({searchMeta ? formatDuration(searchMeta.durationMs) : "0,00"} detik) untuk <span className="font-semibold text-foreground dark:text-white">&ldquo;{response.query}&rdquo;</span>
                       </motion.p>
+                      {response.suggestion && response.suggestion.toLowerCase() !== response.query.toLowerCase() && (
+                        <motion.p className="mb-6 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                          Mungkin maksud Anda: <button type="button" onClick={() => navigateToSearch(response.suggestion!, mode, 1, pageSize)} className="italic text-primary dark:text-sky-400 font-medium hover:underline focus:outline-none">{response.suggestion}</button>
+                        </motion.p>
+                      )}
                       <motion.div className="space-y-6" initial="hidden" animate="visible" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } }}>
                         {response.results.map((item, idx) => (
                           <SearchResultItem key={`${item.nama_perawi}-${item.nomor_hadits}-${idx}`} item={item} index={idx} />

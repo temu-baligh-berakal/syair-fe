@@ -13,6 +13,7 @@ export type SearchResult = {
 export type SearchResponse = {
   query: string;
   total: number;
+  suggestion?: string | null;
   results: SearchResult[];
 };
 
