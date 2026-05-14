@@ -32,10 +32,10 @@ export default function SearchResultItem({
         {/* Header Info */}
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs sm:text-sm font-medium text-muted-foreground dark:text-slate-400">
-            {item.nama_perawi}
+            Riwayat {item.nama_perawi}
           </p>
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 dark:bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-primary dark:text-sky-400">
-            {item.score}
+            Skor: {item.score}
           </span>
         </div>
 
@@ -46,11 +46,6 @@ export default function SearchResultItem({
         >
           {item.referensi_lengkap}
         </motion.h2>
-
-        {/* Hadith Reference */}
-        <p className="mt-2.5 text-xs sm:text-sm text-muted-foreground dark:text-slate-500">
-          Hadits No. {item.nomor_hadits}
-        </p>
 
         {/* Arabic Text */}
         <motion.div
