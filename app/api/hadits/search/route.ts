@@ -9,6 +9,7 @@ type SearchPayload = {
   page_size?: number;
   nama_perawi?: string | null;
   mode?: string;
+  threshold?: number;
 };
 
 export async function POST(request: NextRequest) {
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
   const page = payload.page ?? 1;
   const pageSize = payload.page_size ?? 10;
   const mode = payload.mode ?? "knn";
+  const threshold = payload.threshold ?? 0;
 
   if (!trimmedQuery || trimmedQuery.length < 3) {
     return NextResponse.json(
@@ -52,6 +54,7 @@ export async function POST(request: NextRequest) {
         page_size: pageSize,
         nama_perawi: trimmedNarrator || undefined,
         mode,
+        threshold,
       }),
       cache: "no-store",
     });

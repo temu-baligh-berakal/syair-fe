@@ -110,6 +110,7 @@ function SearchResults() {
           page: searchPage,
           page_size: searchPageSize,
           mode: searchMode,
+          threshold: 0,
         }),
       });
 
@@ -273,7 +274,7 @@ function SearchResults() {
             )}
           </AnimatePresence>
 
-          {(loading || response) && (
+          {(loading || response) && page === 1 && (
             <div className="mb-8">
               <LlmSummary
                 query={loading ? urlQuery : response?.query || ""}
@@ -366,25 +367,79 @@ function SearchResults() {
                 </motion.div>
 
                 {response.total > pageSize && (
-                  <div className="mt-10 flex items-center justify-center gap-4">
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                     <button
-                      onClick={() =>
-                        navigateToSearch(query, mode, Math.max(1, page - 1), pageSize)
-                      }
+                      onClick={() => navigateToSearch(query, mode, Math.max(1, page - 1), pageSize)}
                       disabled={page === 1}
-                      className="flex items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 rounded-full border border-border/40 dark:border-white/10 bg-card pl-2 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronLeft className="h-4 w-4" /> Sebelumnya
+                      <ChevronLeft className="h-4 w-4" /> Prev
                     </button>
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Halaman {page} dari {Math.ceil(response.total / pageSize)}
-                    </span>
+
+                    {(() => {
+                      const totalPages = Math.ceil(response.total / pageSize);
+                      const maxVisiblePages = 5;
+                      let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
+                      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+                      if (endPage - startPage + 1 < maxVisiblePages) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+
+                      const pages = Array.from(
+                        { length: endPage - startPage + 1 },
+                        (_, i) => startPage + i
+                      );
+
+                      return (
+                        <div className="flex items-center gap-1">
+                          {startPage > 1 && (
+                            <>
+                              <button
+                                onClick={() => navigateToSearch(query, mode, 1, pageSize)}
+                                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border/40 dark:border-white/10 bg-card text-xs sm:text-sm font-medium hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
+                              >
+                                1
+                              </button>
+                              {startPage > 2 && <span className="px-1 text-muted-foreground">...</span>}
+                            </>
+                          )}
+                          
+                          {pages.map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => navigateToSearch(query, mode, p, pageSize)}
+                              className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border text-xs sm:text-sm font-medium transition-colors ${
+                                page === p
+                                  ? "border-primary bg-primary text-primary-foreground dark:border-sky-500 dark:bg-sky-500 dark:text-white"
+                                  : "border-border/40 dark:border-white/10 bg-card hover:bg-muted dark:hover:bg-zinc-800"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          ))}
+
+                          {endPage < totalPages && (
+                            <>
+                              {endPage < totalPages - 1 && <span className="px-1 text-muted-foreground">...</span>}
+                              <button
+                                onClick={() => navigateToSearch(query, mode, totalPages, pageSize)}
+                                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border/40 dark:border-white/10 bg-card text-xs sm:text-sm font-medium hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
+                              >
+                                {totalPages}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     <button
                       onClick={() => navigateToSearch(query, mode, page + 1, pageSize)}
                       disabled={page * pageSize >= response.total}
-                      className="flex items-center gap-2 rounded-full border border-border/40 dark:border-white/10 bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 rounded-full border border-border/40 dark:border-white/10 bg-card pl-3 pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Selanjutnya <ChevronRight className="h-4 w-4" />
+                      Next <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 )}
