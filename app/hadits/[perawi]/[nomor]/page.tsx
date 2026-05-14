@@ -61,7 +61,7 @@ export default function HaditsDetailPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors duration-500">
-      <div className="mx-auto max-w-4xl px-6 py-12">
+      <div className="w-full px-6 lg:px-12 py-12">
         <button 
           onClick={() => router.back()}
           className="mb-8 flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors focus:outline-none"
@@ -70,13 +70,13 @@ export default function HaditsDetailPage() {
         </button>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
             {hadits.referensi_lengkap}
           </h1>
-          <p className="text-lg text-muted-foreground mb-10">Diriwayatkan oleh {hadits.nama_perawi}</p>
+          <p className="text-base text-muted-foreground mb-10">Diriwayatkan oleh {hadits.nama_perawi}</p>
 
           <div className="mb-12 rounded-3xl bg-muted/50 dark:bg-zinc-900/50 p-8 sm:p-12 border border-border/40">
-            <p className="text-right text-3xl sm:text-4xl leading-[2.5] font-medium" dir="rtl">
+            <p className="text-right text-xl sm:text-2xl leading-[2.5] font-medium" dir="rtl">
               {hadits.arab}
             </p>
           </div>
