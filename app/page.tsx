@@ -10,7 +10,7 @@ import SearchResultItem from "@/components/SearchResultItem";
 import SearchSettingsDialog from "@/components/SearchSettingsDialog";
 import { SearchMode, SearchResponse, SearchMeta } from "@/app/types/search";
 import { formatDuration, normalizeMode, normalizePage, normalizePageSize } from "@/app/lib/search-helpers";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react"; 
+import { Search, ChevronLeft, ChevronRight, X } from "lucide-react"; 
 
 const exampleQueries = [
   "shalat berjamaah lebih utama",
@@ -228,6 +228,18 @@ function SearchInterface() {
                     className="flex-1 border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
                     autoFocus
                   />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuery("");
+                        document.querySelector<HTMLInputElement>('input[placeholder="Cari hadits..."]')?.focus();
+                      }}
+                      className="p-1 rounded-full text-muted-foreground hover:text-foreground dark:hover:text-slate-300 transition-colors focus:outline-none"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  )}
                   <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-2 flex items-center justify-center rounded-full bg-primary dark:bg-sky-500 px-6 sm:px-8 py-2.5 text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
                     {loading ? "Mencari..." : "Cari"}
                   </motion.button>
@@ -278,6 +290,18 @@ function SearchInterface() {
                           placeholder="Cari hadits..."
                           className="flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-slate-500"
                         />
+                        {query && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuery("");
+                              document.querySelectorAll<HTMLInputElement>('input[placeholder="Cari hadits..."]')[1]?.focus();
+                            }}
+                            className="p-1 rounded-full text-muted-foreground hover:text-foreground dark:hover:text-slate-300 transition-colors focus:outline-none"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
                         <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-2 flex items-center justify-center rounded-lg bg-primary dark:bg-sky-500 px-4 py-1.5 text-xs sm:text-sm font-medium text-primary-foreground dark:text-white transition-all hover:bg-primary/90 dark:hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed">
                           {loading ? "..." : "Cari"}
                         </motion.button>
