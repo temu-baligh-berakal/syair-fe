@@ -63,17 +63,31 @@ export async function POST(request: NextRequest) {
         });
 
         const text = await response.text();
-
+        let data: unknown = null;
+        if (text) {
+            try {
+                data = JSON.parse(text);
+            } catch {
+                data = text;
+            }
+        }
 
         if (!response.ok) {
             return NextResponse.json(
-                text ?? { detail: "Gagal melakukan summarize ke backend." },
+                typeof data === "object" && data !== null
+                    ? data
+                    : { detail: typeof data === "string" && data ? data : "Gagal melakukan summarize ke backend." },
                 { status: response.status }
             );
         }
 
         return NextResponse.json({
-            summary: text,
+            summary:
+                typeof data === "string"
+                    ? data
+                    : typeof (data as { summary?: unknown })?.summary === "string"
+                        ? (data as { summary: string }).summary
+                        : text,
         });
     } catch {
         return NextResponse.json(

@@ -45,7 +45,6 @@ function SearchInterface() {
   // AUTOCOMPLETE STATE
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionLoading, setSuggestionLoading] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   const lastFetchedKeyRef = useRef<string | null>(null);
@@ -90,7 +89,7 @@ function SearchInterface() {
           lastFetchedKeyRef.current = urlSearchKey;
           return;
         }
-      } catch (e) {
+      } catch {
         console.error("Gagal membaca session storage");
       }
     }
@@ -109,7 +108,6 @@ function SearchInterface() {
         return;
       }
 
-      setSuggestionLoading(true);
       try {
         const res = await fetch(`/api/hadits/suggest?q=${encodeURIComponent(query)}`);
         const data = await res.json();
@@ -118,8 +116,6 @@ function SearchInterface() {
         }
       } catch (err) {
         console.error("Gagal fetch suggestions", err);
-      } finally {
-        setSuggestionLoading(false);
       }
     };
 

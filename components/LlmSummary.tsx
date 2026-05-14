@@ -4,10 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { Sparkles } from "lucide-react";
+import { SearchResult } from "@/app/types/search";
 
 interface LlmSummaryProps {
   query: string;
-  results: any[];
+  results: SearchResult[];
   isSearchLoading: boolean;
   cachedSummary?: string | null;
   onSummaryGenerated?: (summary: string) => void;
@@ -59,7 +60,18 @@ export default function LlmSummary({
         });
 
         if (!res.ok) {
-          throw new Error(`HTTP error: ${res.status}`);
+          let message = `HTTP error: ${res.status}`;
+          try {
+            const errorData = (await res.json()) as { detail?: string; message?: string };
+            if (typeof errorData?.detail === "string" && errorData.detail.trim()) {
+              message = errorData.detail;
+            } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
+              message = errorData.message;
+            }
+          } catch {
+            // Fallback ke status code jika body error tidak bisa diparse.
+          }
+          throw new Error(message);
         }
 
         const data = await res.json();
