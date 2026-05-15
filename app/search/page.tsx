@@ -41,9 +41,19 @@ function SearchResults() {
 
   const lastFetchedKeyRef = useRef<string | null>(null);
 
+  // Key tanpa page — identitas unik untuk satu "sesi pencarian" (query+mode+size+narrator sama)
+  const baseSearchKey = useMemo(() => {
+    return urlQuery ? `${urlQuery}::${urlMode}::${urlPageSize}::${urlNarrator}` : null;
+  }, [urlQuery, urlMode, urlPageSize, urlNarrator]);
+
+  // Key dengan page — dipakai untuk dedup fetch & cache per-halaman
   const urlSearchKey = useMemo(() => {
     return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}::${urlNarrator}` : null;
   }, [urlMode, urlQuery, urlPage, urlPageSize, urlNarrator]);
+
+  // Total kanonik: diambil dari page 1 dan dipertahankan selama baseSearchKey sama
+  const [canonicalTotal, setCanonicalTotal] = useState<number | null>(null);
+  const canonicalTotalKeyRef = useRef<string | null>(null);
 
   // EFEK 1: Sinkronisasi form dengan URL & Auto Scroll
   useEffect(() => {
@@ -53,9 +63,15 @@ function SearchResults() {
     setPageSize(urlPageSize);
     setNarrator(urlNarrator);
 
+    // Reset canonicalTotal jika query/mode/size/narrator berubah (bukan sekadar pindah page)
+    if (canonicalTotalKeyRef.current !== baseSearchKey) {
+      setCanonicalTotal(null);
+      canonicalTotalKeyRef.current = baseSearchKey;
+    }
+
     // Otomatis scroll ke paling atas saat pindah halaman
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [urlQuery, urlMode, urlPage, urlPageSize, urlNarrator]);
+  }, [urlQuery, urlMode, urlPage, urlPageSize, urlNarrator, baseSearchKey]);
 
   // EFEK 2: Jalankan pencarian atau pulihkan dari sesi
   useEffect(() => {
@@ -64,6 +80,8 @@ function SearchResults() {
       setSearchMeta(null);
       setSummary(null);
       setError(null);
+      setCanonicalTotal(null);
+      canonicalTotalKeyRef.current = null;
       lastFetchedKeyRef.current = null;
       return;
     }
@@ -78,6 +96,11 @@ function SearchResults() {
           setResponse(parsed.response);
           setSearchMeta(parsed.meta);
           setSummary(parsed.summary || null);
+          // Pulihkan canonicalTotal dari cache agar total tetap konsisten
+          if (parsed.canonicalTotal != null) {
+            setCanonicalTotal(parsed.canonicalTotal);
+            canonicalTotalKeyRef.current = parsed.baseKey ?? baseSearchKey;
+          }
           setError(null);
           lastFetchedKeyRef.current = urlSearchKey;
           return;
@@ -112,9 +135,13 @@ function SearchResults() {
       if (raw) {
         const parsed = JSON.parse(raw);
         const parts = parsed.key.split("::");
-        // Jika Query, Mode, dan Perawi sama, ambil summary lamanya
+        // Jika Query, Mode, dan Perawi sama, ambil summary & canonicalTotal lamanya
         if (parts[0] === searchQuery && parts[1] === searchMode && (parts[4] || "") === (searchNarrator || "")) {
           preservedSummary = parsed.summary;
+          // Pulihkan canonicalTotal agar total tidak berubah saat pindah page
+          if (parsed.canonicalTotal != null && canonicalTotalKeyRef.current === baseSearchKey) {
+            setCanonicalTotal(parsed.canonicalTotal);
+          }
         }
       }
     } catch (e) {}
@@ -146,18 +173,36 @@ function SearchResults() {
 
       if (!result.ok) throw new Error("Gagal memproses data.");
 
+      const responseData = data as SearchResponse;
+
+      // Ambil total kanonik dari page 1; pertahankan untuk page berikutnya
+      // agar angka "Sekitar X hasil" konsisten di semua halaman.
+      let resolvedTotal = responseData.total;
+      if (searchPage === 1 || canonicalTotalKeyRef.current !== baseSearchKey) {
+        // Page 1 atau query baru — simpan sebagai acuan
+        setCanonicalTotal(resolvedTotal);
+        canonicalTotalKeyRef.current = baseSearchKey;
+      } else if (canonicalTotal !== null) {
+        // Page > 1 — pakai total kanonik yang sudah ada
+        resolvedTotal = canonicalTotal;
+      }
+
+      const normalizedData: SearchResponse = { ...responseData, total: resolvedTotal };
+
       const meta = { durationMs: performance.now() - startedAt };
-      setResponse(data as SearchResponse);
+      setResponse(normalizedData);
       setSearchMeta(meta);
 
       // Simpan state dengan menyertakan summary yang sudah ada
       sessionStorage.setItem(
         "lastSearchState",
         JSON.stringify({ 
-          key: currentKey, 
-          response: data, 
+          key: currentKey,
+          baseKey: baseSearchKey,
+          response: normalizedData, 
           meta, 
-          summary: preservedSummary 
+          summary: preservedSummary,
+          canonicalTotal: resolvedTotal,
         })
       );
     } catch (submitError) {
@@ -309,28 +354,30 @@ function SearchResults() {
             )}
           </AnimatePresence>
 
-          {/* LlmSummary hanya di-mount dan dirender di page 1 */}
+          {/* FIX: LlmSummary tetap hanya dirender di page === 1 */}
           {page === 1 && (loading || response) && (
-            <LlmSummary
-              query={loading ? urlQuery : response?.query || ""}
-              results={response?.results || []}
-              isSearchLoading={loading}
-              cachedSummary={summary}
-              page={page}
-              onSummaryGenerated={(generated) => {
-                setSummary(generated);
-                try {
-                  const raw = sessionStorage.getItem("lastSearchState");
-                  if (raw) {
-                    const currentState = JSON.parse(raw);
-                    sessionStorage.setItem(
-                      "lastSearchState",
-                      JSON.stringify({ ...currentState, summary: generated })
-                    );
-                  }
-                } catch (e) {}
-              }}
-            />
+            <div className="mb-8">
+              <LlmSummary
+                query={loading ? urlQuery : response?.query || ""}
+                results={response?.results || []}
+                isSearchLoading={loading}
+                cachedSummary={summary}
+                page={page}
+                onSummaryGenerated={(generated) => {
+                  setSummary(generated);
+                  try {
+                    const raw = sessionStorage.getItem("lastSearchState");
+                    if (raw) {
+                      const currentState = JSON.parse(raw);
+                      sessionStorage.setItem(
+                        "lastSearchState",
+                        JSON.stringify({ ...currentState, summary: generated })
+                      );
+                    }
+                  } catch (e) {}
+                }}
+              />
+            </div>
           )}
 
           <AnimatePresence mode="wait">
