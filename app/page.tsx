@@ -311,7 +311,7 @@ function SearchInterface() {
       params.set("perawi", nextNarrator.trim());
     }
 
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`/search?${params.toString()}`);
     setShowSuggestions(false);
     setActiveSuggestionIndex(-1);
   }
@@ -366,7 +366,7 @@ function SearchInterface() {
     setQuery("");
     setNarrator("");
     setDraftNarrator("");
-    router.push(pathname);
+    router.push("/");
   }
 
   function saveSettings() {

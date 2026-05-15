@@ -309,30 +309,28 @@ function SearchResults() {
             )}
           </AnimatePresence>
 
-          {/* FIX: LlmSummary tetap hanya dirender di page === 1 */}
+          {/* LlmSummary hanya di-mount dan dirender di page 1 */}
           {page === 1 && (loading || response) && (
-            <div className="mb-8">
-              <LlmSummary
-                query={loading ? urlQuery : response?.query || ""}
-                results={response?.results || []}
-                isSearchLoading={loading}
-                cachedSummary={summary}
-                // HAPUS BARIS INI -> page={page}
-                onSummaryGenerated={(generated) => {
-                  setSummary(generated);
-                  try {
-                    const raw = sessionStorage.getItem("lastSearchState");
-                    if (raw) {
-                      const currentState = JSON.parse(raw);
-                      sessionStorage.setItem(
-                        "lastSearchState",
-                        JSON.stringify({ ...currentState, summary: generated })
-                      );
-                    }
-                  } catch (e) {}
-                }}
-              />
-            </div>
+            <LlmSummary
+              query={loading ? urlQuery : response?.query || ""}
+              results={response?.results || []}
+              isSearchLoading={loading}
+              cachedSummary={summary}
+              page={page}
+              onSummaryGenerated={(generated) => {
+                setSummary(generated);
+                try {
+                  const raw = sessionStorage.getItem("lastSearchState");
+                  if (raw) {
+                    const currentState = JSON.parse(raw);
+                    sessionStorage.setItem(
+                      "lastSearchState",
+                      JSON.stringify({ ...currentState, summary: generated })
+                    );
+                  }
+                } catch (e) {}
+              }}
+            />
           )}
 
           <AnimatePresence mode="wait">
