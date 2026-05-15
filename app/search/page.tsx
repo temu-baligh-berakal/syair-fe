@@ -45,16 +45,19 @@ function SearchResults() {
     return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}::${urlNarrator}` : null;
   }, [urlMode, urlQuery, urlPage, urlPageSize, urlNarrator]);
 
-  // Sinkronisasi form dengan URL
+  // EFEK 1: Sinkronisasi form dengan URL & Auto Scroll
   useEffect(() => {
     setQuery(urlQuery);
     setMode(urlMode);
     setPage(urlPage);
     setPageSize(urlPageSize);
     setNarrator(urlNarrator);
+
+    // Otomatis scroll ke paling atas saat pindah halaman
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [urlQuery, urlMode, urlPage, urlPageSize, urlNarrator]);
 
-  // Jalankan pencarian atau pulihkan dari sesi
+  // EFEK 2: Jalankan pencarian atau pulihkan dari sesi
   useEffect(() => {
     if (!urlSearchKey) {
       setResponse(null);
@@ -84,7 +87,7 @@ function SearchResults() {
       }
     }
 
-    setSummary(null);
+    // PENTING: Jangan hapus summary jika hanya pindah page dalam kueri yang sama
     lastFetchedKeyRef.current = urlSearchKey;
     void runSearch(urlQuery, urlMode, urlPage, urlPageSize, urlNarrator, urlSearchKey);
   }, [urlMode, urlQuery, urlSearchKey, urlPage, urlPageSize, urlNarrator]);
@@ -102,9 +105,27 @@ function SearchResults() {
       return;
     }
 
+    // Logika untuk mempertahankan summary yang sudah ada dari kueri yang sama
+    let preservedSummary = null;
+    try {
+      const raw = sessionStorage.getItem("lastSearchState");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const parts = parsed.key.split("::");
+        // Jika Query, Mode, dan Perawi sama, ambil summary lamanya
+        if (parts[0] === searchQuery && parts[1] === searchMode && (parts[4] || "") === (searchNarrator || "")) {
+          preservedSummary = parsed.summary;
+        }
+      }
+    } catch (e) {}
+
     setLoading(true);
     setError(null);
-    setSummary(null);
+    
+    // Reset summary hanya jika tidak ada summary lama yang bisa dipertahankan
+    if (!preservedSummary) setSummary(null);
+    else setSummary(preservedSummary);
+
     const startedAt = performance.now();
 
     try {
@@ -123,26 +144,26 @@ function SearchResults() {
 
       const data = (await result.json()) as SearchResponse | { detail?: string };
 
-      if (!result.ok) {
-        throw new Error("detail" in data ? data.detail : "Permintaan gagal diproses.");
-      }
+      if (!result.ok) throw new Error("Gagal memproses data.");
 
       const meta = { durationMs: performance.now() - startedAt };
       setResponse(data as SearchResponse);
       setSearchMeta(meta);
 
+      // Simpan state dengan menyertakan summary yang sudah ada
       sessionStorage.setItem(
         "lastSearchState",
-        JSON.stringify({ key: currentKey, response: data, meta, summary: null })
+        JSON.stringify({ 
+          key: currentKey, 
+          response: data, 
+          meta, 
+          summary: preservedSummary 
+        })
       );
     } catch (submitError) {
       setResponse(null);
       setSearchMeta(null);
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Terjadi kesalahan yang tidak diketahui."
-      );
+      setError("Terjadi kesalahan.");
     } finally {
       setLoading(false);
     }
@@ -171,6 +192,7 @@ function SearchResults() {
     router.push(`/search?${params.toString()}`);
   }
 
+  // Sisa fungsi sama persis...
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     navigateToSearch(query, mode, 1, pageSize, narrator);
@@ -287,29 +309,27 @@ function SearchResults() {
             )}
           </AnimatePresence>
 
-          {(loading || response) && page === 1 && (
+          {/* FIX: LlmSummary tetap hanya dirender di page === 1 */}
+          {page === 1 && (loading || response) && (
             <div className="mb-8">
               <LlmSummary
                 query={loading ? urlQuery : response?.query || ""}
                 results={response?.results || []}
                 isSearchLoading={loading}
                 cachedSummary={summary}
+                // HAPUS BARIS INI -> page={page}
                 onSummaryGenerated={(generated) => {
                   setSummary(generated);
                   try {
                     const raw = sessionStorage.getItem("lastSearchState");
                     if (raw) {
                       const currentState = JSON.parse(raw);
-                      if (currentState.key === urlSearchKey) {
-                        sessionStorage.setItem(
-                          "lastSearchState",
-                          JSON.stringify({ ...currentState, summary: generated })
-                        );
-                      }
+                      sessionStorage.setItem(
+                        "lastSearchState",
+                        JSON.stringify({ ...currentState, summary: generated })
+                      );
                     }
-                  } catch (e) {
-                    console.error("Gagal menyimpan summary ke session storage", e);
-                  }
+                  } catch (e) {}
                 }}
               />
             </div>

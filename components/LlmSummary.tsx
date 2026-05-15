@@ -58,8 +58,10 @@ export default function LlmSummary({
       return;
     }
 
-    // Jangan fetch ulang kalau summary sudah ada (misal dari state sebelumnya)
-    if (summary) return;
+    if (summary) return; 
+
+    // BUAT ABORT CONTROLLER
+    const controller = new AbortController();
 
     async function fetchSummary() {
       setLoading(true);
@@ -69,62 +71,63 @@ export default function LlmSummary({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query, hadits_results: results }),
+          signal: controller.signal, // SAMBUNGKAN SIGNAL ABORT KE FETCH
         });
 
         if (!res.ok) {
           let message = `HTTP error: ${res.status}`;
           try {
             const errorData = (await res.json()) as { detail?: string; message?: string };
-            if (typeof errorData?.detail === "string" && errorData.detail.trim()) {
-              message = errorData.detail;
-            } else if (typeof errorData?.message === "string" && errorData.message.trim()) {
-              message = errorData.message;
-            }
-          } catch {
-            // Fallback ke status code jika body error tidak bisa diparse.
-          }
+            if (typeof errorData?.detail === "string" && errorData.detail.trim()) message = errorData.detail;
+            else if (typeof errorData?.message === "string" && errorData.message.trim()) message = errorData.message;
+          } catch {}
           throw new Error(message);
         }
 
         const data = await res.json();
 
-        // --- FIX: Defensive extraction ---
-        // Handle berbagai format response: { summary: "..." } atau string langsung
         const extractText = (): string => {
           if (typeof data === "string") return data;
           if (typeof data?.summary === "string") return data.summary;
           if (typeof data?.result === "string") return data.result;
           if (typeof data?.text === "string") return data.text;
-          console.error("[LlmSummary] Unexpected response format:", JSON.stringify(data));
           throw new Error("Format respons tidak dikenali dari server.");
         };
 
-        // Bersihkan escape characters
         let cleanText = extractText();
         if (cleanText.startsWith('"') && cleanText.endsWith('"')) {
           cleanText = cleanText.slice(1, -1);
         }
         cleanText = cleanText.replace(/\\n/g, "\n").replace(/\\"/g, '"');
 
-        if (!cleanText.trim()) {
-          throw new Error("Ringkasan kosong diterima dari server.");
-        }
+        if (!cleanText.trim()) throw new Error("Ringkasan kosong diterima dari server.");
 
         setSummary(cleanText);
         onSummaryGenerated?.(cleanText);
-      } catch (err) {
+      } catch (err: any) {
+        // JIKA ERROR KARENA DIBATALKAN (USER PINDAH PAGE), JANGAN TAMPILKAN ERROR
+        if (err.name === "AbortError") {
+          console.log("Fetch AI dibatalkan karena user pindah halaman.");
+          return;
+        }
+        
         console.error("[LlmSummary] Gagal rangkum:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Gagal memuat ringkasan. Silakan coba lagi."
-        );
+        setError(err instanceof Error ? err.message : "Gagal memuat ringkasan.");
       } finally {
-        setLoading(false);
+        // Pastikan tidak mengubah state loading jika komponen sudah ter-unmount
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     fetchSummary();
+
+    // CLEANUP FUNCTION: Eksekusi Abort jika komponen hilang dari layar (ke page 2)
+    return () => {
+      controller.abort();
+    };
+    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSearchLoading, results, cachedSummary, query]);
   // Sengaja exclude `summary` dari deps agar tidak infinite loop,
