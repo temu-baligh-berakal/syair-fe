@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -692,5 +692,9 @@ function SearchInterface() {
 
 // PEMBUNGKUS UTAMA DENGAN SUSPENSE
 export default function Home() {
-  return <SearchInterface />;
+  return (
+    <Suspense fallback={null}>
+      <SearchInterface />
+    </Suspense>
+  );
 }
