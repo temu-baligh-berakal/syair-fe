@@ -10,7 +10,7 @@ import LlmSummary from "@/components/LlmSummary";
 import SearchResultItem from "@/components/SearchResultItem";
 import SearchSettingsDialog from "@/components/SearchSettingsDialog";
 import { SearchMode, SearchResponse, SearchMeta } from "@/app/types/search";
-import { formatDuration, normalizeMode, normalizePage, normalizePageSize } from "@/app/lib/search-helpers";
+import { formatDuration, normalizeMode, normalizePage, normalizePageSize, normalizeNarrator } from "@/app/lib/search-helpers";
 
 function SearchResults() {
   const router = useRouter();
@@ -20,13 +20,17 @@ function SearchResults() {
   const urlMode = normalizeMode(searchParams.get("mode"));
   const urlPage = normalizePage(searchParams.get("page"));
   const urlPageSize = normalizePageSize(searchParams.get("size"));
+  const urlNarrator = normalizeNarrator(searchParams.get("perawi"));
 
   const [query, setQuery] = useState(urlQuery);
   const [mode, setMode] = useState<SearchMode>(urlMode);
   const [page, setPage] = useState(urlPage);
   const [pageSize, setPageSize] = useState(urlPageSize);
+  const [narrator, setNarrator] = useState(urlNarrator);
+  
   const [draftMode, setDraftMode] = useState<SearchMode>(urlMode);
   const [draftPageSize, setDraftPageSize] = useState(urlPageSize);
+  const [draftNarrator, setDraftNarrator] = useState(urlNarrator);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +42,8 @@ function SearchResults() {
   const lastFetchedKeyRef = useRef<string | null>(null);
 
   const urlSearchKey = useMemo(() => {
-    return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}` : null;
-  }, [urlMode, urlQuery, urlPage, urlPageSize]);
+    return urlQuery ? `${urlQuery}::${urlMode}::${urlPage}::${urlPageSize}::${urlNarrator}` : null;
+  }, [urlMode, urlQuery, urlPage, urlPageSize, urlNarrator]);
 
   // Sinkronisasi form dengan URL
   useEffect(() => {
@@ -47,7 +51,8 @@ function SearchResults() {
     setMode(urlMode);
     setPage(urlPage);
     setPageSize(urlPageSize);
-  }, [urlQuery, urlMode, urlPage, urlPageSize]);
+    setNarrator(urlNarrator);
+  }, [urlQuery, urlMode, urlPage, urlPageSize, urlNarrator]);
 
   // Jalankan pencarian atau pulihkan dari sesi
   useEffect(() => {
@@ -81,14 +86,15 @@ function SearchResults() {
 
     setSummary(null);
     lastFetchedKeyRef.current = urlSearchKey;
-    void runSearch(urlQuery, urlMode, urlPage, urlPageSize, urlSearchKey);
-  }, [urlMode, urlQuery, urlSearchKey, urlPage, urlPageSize]);
+    void runSearch(urlQuery, urlMode, urlPage, urlPageSize, urlNarrator, urlSearchKey);
+  }, [urlMode, urlQuery, urlSearchKey, urlPage, urlPageSize, urlNarrator]);
 
   async function runSearch(
     searchQuery: string,
     searchMode: SearchMode,
     searchPage: number,
     searchPageSize: number,
+    searchNarrator: string,
     currentKey: string
   ) {
     if (searchQuery.trim().length < 3) {
@@ -109,6 +115,7 @@ function SearchResults() {
           query: searchQuery,
           page: searchPage,
           page_size: searchPageSize,
+          nama_perawi: searchNarrator || undefined,
           mode: searchMode,
           threshold: 0,
         }),
@@ -145,7 +152,8 @@ function SearchResults() {
     nextQuery: string,
     nextMode: SearchMode,
     nextPage: number,
-    nextPageSize: number
+    nextPageSize: number,
+    nextNarrator: string
   ) {
     const trimmed = nextQuery.trim();
     if (trimmed.length < 3) {
@@ -157,12 +165,15 @@ function SearchResults() {
     params.set("mode", nextMode);
     params.set("page", String(nextPage));
     params.set("size", String(nextPageSize));
+    if (nextNarrator) {
+      params.set("perawi", nextNarrator);
+    }
     router.push(`/search?${params.toString()}`);
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    navigateToSearch(query, mode, 1, pageSize);
+    navigateToSearch(query, mode, 1, pageSize, narrator);
   }
 
   function handleBackToHome() {
@@ -176,19 +187,21 @@ function SearchResults() {
       : Math.min(50, Math.max(1, draftPageSize));
     setMode(draftMode);
     setPageSize(normalizedPageSize);
+    setNarrator(draftNarrator);
     setDraftPageSize(normalizedPageSize);
     setSettingsOpen(false);
     toast.success("Pengaturan berhasil disimpan", {
       description: `Mode ${draftMode} dengan ${normalizedPageSize} item aktif.`,
       duration: 1000,
     });
-    if (query) navigateToSearch(query, draftMode, 1, normalizedPageSize);
+    if (query) navigateToSearch(query, draftMode, 1, normalizedPageSize, draftNarrator);
   }
 
   function handleOpenSettings(open: boolean) {
     if (open) {
       setDraftMode(mode);
       setDraftPageSize(pageSize);
+      setDraftNarrator(narrator);
     }
     setSettingsOpen(open);
   }
@@ -339,7 +352,7 @@ function SearchResults() {
                       <button
                         type="button"
                         onClick={() =>
-                          navigateToSearch(response.suggestion!, mode, 1, pageSize)
+                          navigateToSearch(response.suggestion!, mode, 1, pageSize, narrator)
                         }
                         className="italic text-primary dark:text-sky-400 font-medium hover:underline focus:outline-none"
                       >
@@ -369,7 +382,7 @@ function SearchResults() {
                 {response.total > pageSize && (
                   <div className="mt-10 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
                     <button
-                      onClick={() => navigateToSearch(query, mode, Math.max(1, page - 1), pageSize)}
+                      onClick={() => navigateToSearch(query, mode, Math.max(1, page - 1), pageSize, narrator)}
                       disabled={page === 1}
                       className="flex items-center gap-1 rounded-full border border-border/40 dark:border-white/10 bg-card pl-2 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -396,7 +409,7 @@ function SearchResults() {
                           {startPage > 1 && (
                             <>
                               <button
-                                onClick={() => navigateToSearch(query, mode, 1, pageSize)}
+                                onClick={() => navigateToSearch(query, mode, 1, pageSize, narrator)}
                                 className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border/40 dark:border-white/10 bg-card text-xs sm:text-sm font-medium hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
                               >
                                 1
@@ -408,7 +421,7 @@ function SearchResults() {
                           {pages.map((p) => (
                             <button
                               key={p}
-                              onClick={() => navigateToSearch(query, mode, p, pageSize)}
+                              onClick={() => navigateToSearch(query, mode, p, pageSize, narrator)}
                               className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border text-xs sm:text-sm font-medium transition-colors ${
                                 page === p
                                   ? "border-primary bg-primary text-primary-foreground dark:border-sky-500 dark:bg-sky-500 dark:text-white"
@@ -423,7 +436,7 @@ function SearchResults() {
                             <>
                               {endPage < totalPages - 1 && <span className="px-1 text-muted-foreground">...</span>}
                               <button
-                                onClick={() => navigateToSearch(query, mode, totalPages, pageSize)}
+                                onClick={() => navigateToSearch(query, mode, totalPages, pageSize, narrator)}
                                 className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border/40 dark:border-white/10 bg-card text-xs sm:text-sm font-medium hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
                               >
                                 {totalPages}
@@ -435,7 +448,7 @@ function SearchResults() {
                     })()}
 
                     <button
-                      onClick={() => navigateToSearch(query, mode, page + 1, pageSize)}
+                      onClick={() => navigateToSearch(query, mode, page + 1, pageSize, narrator)}
                       disabled={page * pageSize >= response.total}
                       className="flex items-center gap-1 rounded-full border border-border/40 dark:border-white/10 bg-card pl-3 pr-2 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors hover:bg-muted dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -464,6 +477,8 @@ function SearchResults() {
         setDraftMode={setDraftMode}
         draftPageSize={draftPageSize}
         setDraftPageSize={setDraftPageSize}
+        draftNarrator={draftNarrator}
+        setDraftNarrator={setDraftNarrator}
         onSave={saveSettings}
         onCancel={() => handleOpenSettings(false)}
       />
