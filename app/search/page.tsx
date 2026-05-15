@@ -317,7 +317,7 @@ function SearchResults() {
                 results={response?.results || []}
                 isSearchLoading={loading}
                 cachedSummary={summary}
-                // HAPUS BARIS INI -> page={page}
+                page={page}
                 onSummaryGenerated={(generated) => {
                   setSummary(generated);
                   try {

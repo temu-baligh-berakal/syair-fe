@@ -12,6 +12,7 @@ interface LlmSummaryProps {
   isSearchLoading: boolean;
   cachedSummary?: string | null;
   onSummaryGenerated?: (summary: string) => void;
+  page?: number;
 }
 
 export default function LlmSummary({
@@ -20,6 +21,7 @@ export default function LlmSummary({
   isSearchLoading,
   cachedSummary,
   onSummaryGenerated,
+  page = 1,
 }: LlmSummaryProps) {
   const [summary, setSummary] = useState<string | null>(cachedSummary || null);
   const [loading, setLoading] = useState(false);
@@ -47,6 +49,14 @@ export default function LlmSummary({
       setSummary(null);
       setDisplayedText("");
       setIsExpanded(false);
+      setError(null);
+      return;
+    }
+
+    // Jangan jalankan summarize jika bukan di page 1
+    if (page !== 1) {
+      setSummary(null);
+      setDisplayedText("");
       setError(null);
       return;
     }
@@ -129,7 +139,7 @@ export default function LlmSummary({
     };
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSearchLoading, results, cachedSummary, query]);
+  }, [isSearchLoading, results, cachedSummary, query, page]);
   // Sengaja exclude `summary` dari deps agar tidak infinite loop,
   // tapi kita guard dengan `if (summary) return` di atas.
 
